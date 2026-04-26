@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { CATEGORIES, SUBCATEGORIES, USER_NAMES, type Transaction, type ClassType, type UserName } from '@/types'
 import { formatCurrency, formatDate, getTodayStr, getCurrentYearMonth, getYearOptions } from '@/lib/utils'
 import Toast from '@/components/ui/Toast'
@@ -8,7 +8,6 @@ import ConfirmModal from '@/components/ui/ConfirmModal'
 import PresetModal from '@/components/admin/PresetModal'
 import ImportModal from '@/components/admin/ImportModal'
 
-// 함수로 만들어야 매 호출 시 오늘 날짜가 반영됨
 const makeEmptyForm = () => ({
   date: getTodayStr(),
   class_type: '지출' as ClassType,
@@ -20,6 +19,18 @@ const makeEmptyForm = () => ({
   memo: '',
 })
 
+const CLASS_BADGE: Record<string, string> = {
+  수입: 'bg-blue-50 text-blue-700',
+  지출: 'bg-red-50 text-red-700',
+  이체: 'bg-gray-100 text-gray-600',
+}
+
+const CLASS_AMOUNT: Record<string, string> = {
+  수입: 'text-blue-600',
+  지출: 'text-red-600',
+  이체: 'text-gray-500',
+}
+
 export default function TransactionsPage() {
   const { year: curYear, month: curMonth } = getCurrentYearMonth()
   const [year, setYear] = useState(curYear)
@@ -28,11 +39,17 @@ export default function TransactionsPage() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [showPreset, setShowPreset] = useState(false)
+  const [showImport, setShowImport] = useState(false)
   const [form, setForm] = useState(makeEmptyForm)
   const [editId, setEditId] = useState<string | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
-  const [showImport, setShowImport] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+
+  // 필터 상태
+  const [filterClass, setFilterClass] = useState('전체')
+  const [filterCategory, setFilterCategory] = useState('전체')
+  const [filterUser, setFilterUser] = useState('전체')
+  const [filterKeyword, setFilterKeyword] = useState('')
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -48,6 +65,30 @@ export default function TransactionsPage() {
   }, [year, month])
 
   useEffect(() => { fetchData() }, [fetchData])
+
+  // 필터 변경 시 카테고리 리셋
+  useEffect(() => { setFilterCategory('전체') }, [filterClass])
+
+  // 현재 데이터에서 카테고리 목록 동적 추출
+  const categoryOptions = useMemo(() => {
+    const base = transactions
+      .filter(t => filterClass === '전체' || t.class_type === filterClass)
+      .map(t => t.category)
+    return ['전체', ...Array.from(new Set(base))]
+  }, [transactions, filterClass])
+
+  // 클라이언트 필터링
+  const filtered = useMemo(() => transactions.filter(t => {
+    if (filterClass !== '전체' && t.class_type !== filterClass) return false
+    if (filterCategory !== '전체' && t.category !== filterCategory) return false
+    if (filterUser !== '전체' && t.user_name !== filterUser) return false
+    if (filterKeyword) {
+      const kw = filterKeyword.toLowerCase()
+      const hit = [t.item, t.subcategory, t.memo, t.category].some(v => v?.toLowerCase().includes(kw))
+      if (!hit) return false
+    }
+    return true
+  }), [transactions, filterClass, filterCategory, filterUser, filterKeyword])
 
   function handleClassChange(classType: '수입' | '지출') {
     const defaultCat = CATEGORIES[classType][0]
@@ -71,24 +112,14 @@ export default function TransactionsPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    const payload = {
-      ...form,
-      amount: Number(form.amount),
-      subcategory: form.subcategory || null,
-      item: form.item || null,
-      memo: form.memo || null,
-    }
+    const payload = { ...form, amount: Number(form.amount), subcategory: form.subcategory || null, item: form.item || null, memo: form.memo || null }
     try {
       const res = editId
         ? await fetch(`/api/transactions/${editId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
         : await fetch('/api/transactions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
-
-      if (!res.ok) throw new Error('저장 실패')
+      if (!res.ok) throw new Error()
       setToast({ message: editId ? '수정되었습니다' : '저장되었습니다', type: 'success' })
-      setForm(makeEmptyForm())
-      setEditId(null)
-      setShowForm(false)
-      fetchData()
+      setForm(makeEmptyForm()); setEditId(null); setShowForm(false); fetchData()
     } catch {
       setToast({ message: '저장에 실패했습니다', type: 'error' })
     }
@@ -97,7 +128,7 @@ export default function TransactionsPage() {
   async function handleDelete(id: string) {
     try {
       const res = await fetch(`/api/transactions/${id}`, { method: 'DELETE' })
-      if (!res.ok) throw new Error('삭제 실패')
+      if (!res.ok) throw new Error()
       setToast({ message: '삭제되었습니다', type: 'success' })
       fetchData()
     } catch {
@@ -107,24 +138,18 @@ export default function TransactionsPage() {
     }
   }
 
-  // 이체는 순자산 이동이므로 수입/지출 집계에서 제외
   const income = transactions.filter(t => t.class_type === '수입').reduce((s, t) => s + t.amount, 0)
   const expense = transactions.filter(t => t.class_type === '지출').reduce((s, t) => s + t.amount, 0)
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-full">
+      {/* 헤더 */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold text-gray-900">수입/지출</h1>
         <div className="flex gap-2">
-          <button onClick={() => setShowImport(true)} className="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
-            📂 파일 업로드
-          </button>
-          <button onClick={() => setShowPreset(true)} className="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
-            고정지출 불러오기
-          </button>
-          <button onClick={() => { setShowForm(!showForm); setEditId(null); setForm(makeEmptyForm()) }} className="px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-            + 새 항목
-          </button>
+          <button onClick={() => setShowImport(true)} className="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">📂 파일 업로드</button>
+          <button onClick={() => setShowPreset(true)} className="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">고정지출 불러오기</button>
+          <button onClick={() => { setShowForm(!showForm); setEditId(null); setForm(makeEmptyForm()) }} className="px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">+ 새 항목</button>
         </div>
       </div>
 
@@ -158,8 +183,7 @@ export default function TransactionsPage() {
               </div>
             </div>
           </div>
-
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">카테고리</label>
               <select value={form.category} onChange={e => setForm(f=>({...f, category: e.target.value, subcategory: ''}))} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg">
@@ -173,39 +197,34 @@ export default function TransactionsPage() {
                 {(SUBCATEGORIES[form.category] ?? []).map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">항목명</label>
               <input type="text" value={form.item} onChange={e => setForm(f=>({...f, item: e.target.value}))} placeholder="선택 입력" className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" />
             </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">금액 (원)</label>
-              <input type="number" value={form.amount} onChange={e => setForm(f=>({...f, amount: e.target.value}))} required min="1" placeholder="0" className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" />
-            </div>
           </div>
-
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">사용자</label>
-              <div className="flex gap-1 flex-wrap">
-                {USER_NAMES.map(u => (
-                  <button key={u} type="button" onClick={() => setForm(f=>({...f, user_name: u}))}
-                    className={`px-3 py-1.5 text-xs rounded-lg border ${form.user_name === u ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300'}`}>
-                    {u}
-                  </button>
-                ))}
-              </div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">금액 (원)</label>
+              <input type="number" value={form.amount} onChange={e => setForm(f=>({...f, amount: e.target.value}))} required min="0" placeholder="0" className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">메모</label>
               <input type="text" value={form.memo} onChange={e => setForm(f=>({...f, memo: e.target.value}))} placeholder="선택 입력" className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" />
             </div>
           </div>
-
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">사용자</label>
+            <div className="flex gap-1 flex-wrap">
+              {USER_NAMES.map(u => (
+                <button key={u} type="button" onClick={() => setForm(f=>({...f, user_name: u}))}
+                  className={`px-3 py-1.5 text-xs rounded-lg border ${form.user_name === u ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300'}`}>
+                  {u}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="flex gap-2 justify-end">
-            <button type="button" onClick={() => { setShowForm(false); setEditId(null); setForm(makeEmptyForm()) }} className="px-4 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200">취소</button>
+            <button type="button" onClick={() => { setShowForm(false); setEditId(null); setForm(makeEmptyForm()) }} className="px-4 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg">취소</button>
             <button type="submit" className="px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700">{editId ? '수정' : '저장'}</button>
           </div>
         </form>
@@ -225,85 +244,95 @@ export default function TransactionsPage() {
         ))}
       </div>
 
-      {/* 목록 */}
+      {/* 필터 바 */}
+      <div className="flex flex-wrap gap-2 mb-3 p-3 bg-gray-50 border border-gray-200 rounded-xl">
+        <select value={filterClass} onChange={e => setFilterClass(e.target.value)} className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-white">
+          {['전체','수입','지출','이체'].map(v => <option key={v} value={v}>{v === '전체' ? '분류 전체' : v}</option>)}
+        </select>
+        <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-white">
+          {categoryOptions.map(v => <option key={v} value={v}>{v === '전체' ? '카테고리 전체' : v}</option>)}
+        </select>
+        <select value={filterUser} onChange={e => setFilterUser(e.target.value)} className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-white">
+          {['전체', ...USER_NAMES].map(v => <option key={v} value={v}>{v === '전체' ? '사용자 전체' : v}</option>)}
+        </select>
+        <input
+          type="text" value={filterKeyword} onChange={e => setFilterKeyword(e.target.value)}
+          placeholder="항목명/세부/메모 검색..."
+          className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-white flex-1 min-w-40"
+        />
+        {(filterClass !== '전체' || filterCategory !== '전체' || filterUser !== '전체' || filterKeyword) && (
+          <button onClick={() => { setFilterClass('전체'); setFilterCategory('전체'); setFilterUser('전체'); setFilterKeyword('') }}
+            className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700">
+            필터 초기화
+          </button>
+        )}
+        <span className="px-2 py-1.5 text-xs text-gray-400">{filtered.length} / {transactions.length}건</span>
+      </div>
+
+      {/* 목록 테이블 */}
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
         {loading ? (
           <div className="p-8 text-center text-sm text-gray-500">로딩 중...</div>
-        ) : transactions.length === 0 ? (
-          <div className="p-8 text-center text-sm text-gray-500">이 기간에 데이터가 없어요</div>
+        ) : filtered.length === 0 ? (
+          <div className="p-8 text-center text-sm text-gray-500">
+            {transactions.length === 0 ? '이 기간에 데이터가 없어요' : '필터 조건에 맞는 항목이 없어요'}
+          </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                {['날짜','분류','항목','사용자','금액','메모',''].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {transactions.map(t => (
-                <tr key={t.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-gray-600">{formatDate(t.date)}</td>
-                  <td className="px-4 py-3">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${
-                      t.class_type === '수입' ? 'bg-blue-50 text-blue-700' :
-                      t.class_type === '이체' ? 'bg-gray-100 text-gray-600' :
-                      'bg-red-50 text-red-700'
-                    }`}>
-                      {t.class_type === '이체' ? '이체' : t.category}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-800">{[t.subcategory, t.item].filter(Boolean).join(' · ') || '-'}</td>
-                  <td className="px-4 py-3 text-gray-600 text-xs">{t.user_name}</td>
-                  <td className={`px-4 py-3 font-medium ${
-                    t.class_type === '수입' ? 'text-blue-600' :
-                    t.class_type === '이체' ? 'text-gray-500' :
-                    'text-red-600'
-                  }`}>
-                    {t.class_type === '이체' ? '' : t.class_type === '지출' ? '-' : '+'}{formatCurrency(t.amount)}
-                  </td>
-                  <td className="px-4 py-3 text-gray-500 max-w-24 truncate">{t.memo ?? '-'}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-2">
-                      <button onClick={() => handleEdit(t)} className="text-xs text-blue-600 hover:underline">수정</button>
-                      <button onClick={() => setDeleteId(t.id)} className="text-xs text-red-500 hover:underline">삭제</button>
-                    </div>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm whitespace-nowrap">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  {['날짜','분류','카테고리','세부카테고리','항목명','사용자','금액','메모',''].map(h => (
+                    <th key={h} className="px-3 py-3 text-left text-xs font-medium text-gray-500">{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filtered.map(t => (
+                  <tr key={t.id} className="hover:bg-gray-50">
+                    <td className="px-3 py-2.5 text-gray-600 text-xs">{formatDate(t.date)}</td>
+                    <td className="px-3 py-2.5">
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${CLASS_BADGE[t.class_type] ?? 'bg-gray-100 text-gray-600'}`}>
+                        {t.class_type}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5 text-gray-700 text-xs">{t.category || '-'}</td>
+                    <td className="px-3 py-2.5 text-gray-600 text-xs">{t.subcategory || '-'}</td>
+                    <td className="px-3 py-2.5 text-gray-600 text-xs">{t.item || '-'}</td>
+                    <td className="px-3 py-2.5 text-gray-500 text-xs">{t.user_name}</td>
+                    <td className={`px-3 py-2.5 font-medium text-xs ${CLASS_AMOUNT[t.class_type] ?? 'text-gray-600'}`}>
+                      {t.class_type === '수입' ? '+' : t.class_type === '지출' ? '-' : ''}{formatCurrency(t.amount)}
+                    </td>
+                    {/* 메모: 내용 있으면 truncate + hover 시 전체 내용 표시 */}
+                    <td className="px-3 py-2.5 text-xs max-w-36">
+                      {t.memo ? (
+                        <span
+                          title={t.memo}
+                          className="block truncate text-gray-500 cursor-help border-b border-dotted border-gray-300"
+                        >
+                          {t.memo}
+                        </span>
+                      ) : (
+                        <span className="text-gray-300">-</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <div className="flex gap-2">
+                        <button onClick={() => handleEdit(t)} className="text-xs text-blue-600 hover:underline">수정</button>
+                        <button onClick={() => setDeleteId(t.id)} className="text-xs text-red-500 hover:underline">삭제</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
-      {deleteId && (
-        <ConfirmModal
-          message="이 항목을 삭제할까요? (복구 가능)"
-          onConfirm={() => handleDelete(deleteId)}
-          onCancel={() => setDeleteId(null)}
-        />
-      )}
-
-      {showImport && (
-        <ImportModal
-          onClose={() => setShowImport(false)}
-          onSuccess={(count) => {
-            setShowImport(false)
-            fetchData()
-            setToast({ message: `${count}개 항목이 저장되었습니다`, type: 'success' })
-          }}
-        />
-      )}
-
-      {showPreset && (
-        <PresetModal
-          year={year}
-          month={month}
-          onClose={() => setShowPreset(false)}
-          onSuccess={() => { setShowPreset(false); fetchData(); setToast({ message: '고정지출이 등록되었습니다', type: 'success' }) }}
-        />
-      )}
-
+      {deleteId && <ConfirmModal message="이 항목을 삭제할까요? (복구 가능)" onConfirm={() => handleDelete(deleteId)} onCancel={() => setDeleteId(null)} />}
+      {showImport && <ImportModal onClose={() => setShowImport(false)} onSuccess={count => { setShowImport(false); fetchData(); setToast({ message: `${count}개 항목이 저장되었습니다`, type: 'success' }) }} />}
+      {showPreset && <PresetModal year={year} month={month} onClose={() => setShowPreset(false)} onSuccess={() => { setShowPreset(false); fetchData(); setToast({ message: '고정지출이 등록되었습니다', type: 'success' }) }} />}
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>
   )
