@@ -1,11 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
+import { getAuthUser, unauthorized, serverError } from '@/lib/api'
 import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const user = await getAuthUser()
+  if (!user) return unauthorized()
 
+  const supabase = await createClient()
   const { searchParams } = new URL(request.url)
   const year = searchParams.get('year')
   const month = searchParams.get('month')
@@ -15,6 +16,7 @@ export async function GET(request: Request) {
     .select('*')
     .is('deleted_at', null)
     .order('date', { ascending: false })
+    .order('created_at', { ascending: false })
 
   if (year && month) {
     const from = `${year}-${String(month).padStart(2, '0')}-01`
@@ -24,27 +26,20 @@ export async function GET(request: Request) {
   }
 
   const { data, error } = await query
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return serverError(error.message)
   return NextResponse.json(data)
 }
 
 export async function POST(request: Request) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const user = await getAuthUser()
+  if (!user) return unauthorized()
 
+  const supabase = await createClient()
   const body = await request.json()
 
-  if (!body.amount || body.amount <= 0) {
-    return NextResponse.json({ error: 'amount는 양수여야 합니다' }, { status: 400 })
-  }
-
   const { data, error } = await supabase
-    .from('transactions')
-    .insert(body)
-    .select()
-    .single()
+    .from('transactions').insert(body).select().single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return serverError(error.message)
   return NextResponse.json(data, { status: 201 })
 }

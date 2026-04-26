@@ -35,13 +35,15 @@ export default function ImportModal({ onClose, onSuccess }: ImportModalProps) {
   const [saving, setSaving] = useState(false)
   const [result, setResult] = useState<ImportResult | null>(null)
   const [showErrors, setShowErrors] = useState(false)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   async function processFile(file: File) {
     if (!file.name.match(/\.(xlsx|xls|csv)$/i)) {
-      alert('xlsx, xls, csv 파일만 지원합니다')
+      setErrorMsg('xlsx, xls, csv 파일만 지원합니다')
       return
     }
+    setErrorMsg(null)
     setUploading(true)
     try {
       const fd = new FormData()
@@ -53,7 +55,7 @@ export default function ImportModal({ onClose, onSuccess }: ImportModalProps) {
       setResult(data)
       setStep('preview')
     } catch {
-      alert('파일 파싱에 실패했습니다. 파일 형식을 확인해주세요.')
+      setErrorMsg('파일 파싱에 실패했습니다. 파일 형식을 확인해주세요.')
     } finally {
       setUploading(false)
     }
@@ -74,7 +76,7 @@ export default function ImportModal({ onClose, onSuccess }: ImportModalProps) {
       const { saved } = await res.json()
       onSuccess(saved)
     } catch {
-      alert('저장에 실패했습니다')
+      setErrorMsg('저장에 실패했습니다')
     } finally {
       setSaving(false)
     }
@@ -107,6 +109,7 @@ export default function ImportModal({ onClose, onSuccess }: ImportModalProps) {
               <p className="text-sm font-medium text-gray-700">파일을 드래그하거나 클릭해서 선택</p>
               <p className="text-xs text-gray-400">.xlsx / .xls / .csv 지원</p>
               {uploading && <p className="text-xs text-blue-600 mt-2">파싱 중...</p>}
+            {errorMsg && <p className="text-xs text-red-600 mt-2">{errorMsg}</p>}
             </div>
             <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) processFile(f) }} />
 

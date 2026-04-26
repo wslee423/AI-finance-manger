@@ -16,6 +16,7 @@ export default function PresetModal({ year, month, onClose, onSuccess }: PresetM
   const [amounts, setAmounts] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/presets')
@@ -61,7 +62,7 @@ export default function PresetModal({ year, month, onClose, onSuccess }: PresetM
       if (!res.ok) throw new Error('저장 실패')
       onSuccess()
     } catch {
-      alert('저장에 실패했습니다')
+      setErrorMsg('저장에 실패했습니다. 다시 시도해주세요.')
     } finally {
       setSaving(false)
     }
@@ -114,6 +115,9 @@ export default function PresetModal({ year, month, onClose, onSuccess }: PresetM
               </div>
               {zeroAmounts.length > 0 && (
                 <p className="text-xs text-amber-600 mt-3">⚠ 금액이 0인 항목 {zeroAmounts.length}개는 제외됩니다</p>
+              )}
+              {errorMsg && (
+                <p className="text-xs text-red-600 mt-3">{errorMsg}</p>
               )}
             </>
           )}

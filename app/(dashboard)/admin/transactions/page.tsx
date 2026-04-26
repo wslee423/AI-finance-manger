@@ -2,13 +2,14 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { CATEGORIES, SUBCATEGORIES, USER_NAMES, type Transaction, type ClassType, type UserName } from '@/types'
-import { formatCurrency, formatDate, getTodayStr, getCurrentYearMonth } from '@/lib/utils'
+import { formatCurrency, formatDate, getTodayStr, getCurrentYearMonth, getYearOptions } from '@/lib/utils'
 import Toast from '@/components/ui/Toast'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import PresetModal from '@/components/admin/PresetModal'
 import ImportModal from '@/components/admin/ImportModal'
 
-const EMPTY_FORM = {
+// 함수로 만들어야 매 호출 시 오늘 날짜가 반영됨
+const makeEmptyForm = () => ({
   date: getTodayStr(),
   class_type: '지출' as ClassType,
   category: '변동지출',
@@ -17,7 +18,7 @@ const EMPTY_FORM = {
   user_name: '공동' as UserName,
   amount: '',
   memo: '',
-}
+})
 
 export default function TransactionsPage() {
   const { year: curYear, month: curMonth } = getCurrentYearMonth()
@@ -27,7 +28,7 @@ export default function TransactionsPage() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [showPreset, setShowPreset] = useState(false)
-  const [form, setForm] = useState(EMPTY_FORM)
+  const [form, setForm] = useState(makeEmptyForm)
   const [editId, setEditId] = useState<string | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [showImport, setShowImport] = useState(false)
@@ -48,7 +49,7 @@ export default function TransactionsPage() {
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  function handleClassChange(classType: ClassType) {
+  function handleClassChange(classType: '수입' | '지출') {
     const defaultCat = CATEGORIES[classType][0]
     setForm(f => ({ ...f, class_type: classType, category: defaultCat, subcategory: '' }))
   }
@@ -84,7 +85,7 @@ export default function TransactionsPage() {
 
       if (!res.ok) throw new Error('저장 실패')
       setToast({ message: editId ? '수정되었습니다' : '저장되었습니다', type: 'success' })
-      setForm(EMPTY_FORM)
+      setForm(makeEmptyForm())
       setEditId(null)
       setShowForm(false)
       fetchData()
@@ -106,6 +107,7 @@ export default function TransactionsPage() {
     }
   }
 
+  // 이체는 순자산 이동이므로 수입/지출 집계에서 제외
   const income = transactions.filter(t => t.class_type === '수입').reduce((s, t) => s + t.amount, 0)
   const expense = transactions.filter(t => t.class_type === '지출').reduce((s, t) => s + t.amount, 0)
 
@@ -120,7 +122,7 @@ export default function TransactionsPage() {
           <button onClick={() => setShowPreset(true)} className="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
             고정지출 불러오기
           </button>
-          <button onClick={() => { setShowForm(!showForm); setEditId(null); setForm(EMPTY_FORM) }} className="px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+          <button onClick={() => { setShowForm(!showForm); setEditId(null); setForm(makeEmptyForm()) }} className="px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
             + 새 항목
           </button>
         </div>
@@ -129,7 +131,7 @@ export default function TransactionsPage() {
       {/* 기간 필터 */}
       <div className="flex gap-2 mb-4">
         <select value={year} onChange={e => setYear(Number(e.target.value))} className="px-3 py-2 text-sm border border-gray-300 rounded-lg">
-          {[2022,2023,2024,2025,2026].map(y => <option key={y} value={y}>{y}년</option>)}
+          {getYearOptions().map(y => <option key={y} value={y}>{y}년</option>)}
         </select>
         <select value={month} onChange={e => setMonth(Number(e.target.value))} className="px-3 py-2 text-sm border border-gray-300 rounded-lg">
           {Array.from({length:12},(_,i)=>i+1).map(m => <option key={m} value={m}>{m}월</option>)}
@@ -147,7 +149,7 @@ export default function TransactionsPage() {
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">분류</label>
               <div className="flex gap-2">
-                {(['수입','지출'] as ClassType[]).map(ct => (
+                {(['수입','지출'] as const).map(ct => (
                   <button key={ct} type="button" onClick={() => handleClassChange(ct)}
                     className={`flex-1 py-2 text-sm rounded-lg border ${form.class_type === ct ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300'}`}>
                     {ct}
@@ -161,7 +163,7 @@ export default function TransactionsPage() {
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">카테고리</label>
               <select value={form.category} onChange={e => setForm(f=>({...f, category: e.target.value, subcategory: ''}))} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg">
-                {CATEGORIES[form.class_type].map(c => <option key={c} value={c}>{c}</option>)}
+                {(CATEGORIES[form.class_type as '수입' | '지출'] ?? []).map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div>
@@ -203,7 +205,7 @@ export default function TransactionsPage() {
           </div>
 
           <div className="flex gap-2 justify-end">
-            <button type="button" onClick={() => { setShowForm(false); setEditId(null); setForm(EMPTY_FORM) }} className="px-4 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200">취소</button>
+            <button type="button" onClick={() => { setShowForm(false); setEditId(null); setForm(makeEmptyForm()) }} className="px-4 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200">취소</button>
             <button type="submit" className="px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700">{editId ? '수정' : '저장'}</button>
           </div>
         </form>
@@ -243,14 +245,22 @@ export default function TransactionsPage() {
                 <tr key={t.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 text-gray-600">{formatDate(t.date)}</td>
                   <td className="px-4 py-3">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${t.class_type === '수입' ? 'bg-blue-50 text-blue-700' : 'bg-red-50 text-red-700'}`}>
-                      {t.category}
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${
+                      t.class_type === '수입' ? 'bg-blue-50 text-blue-700' :
+                      t.class_type === '이체' ? 'bg-gray-100 text-gray-600' :
+                      'bg-red-50 text-red-700'
+                    }`}>
+                      {t.class_type === '이체' ? '이체' : t.category}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-gray-800">{[t.subcategory, t.item].filter(Boolean).join(' · ') || '-'}</td>
                   <td className="px-4 py-3 text-gray-600 text-xs">{t.user_name}</td>
-                  <td className={`px-4 py-3 font-medium ${t.class_type === '수입' ? 'text-blue-600' : 'text-red-600'}`}>
-                    {t.class_type === '지출' ? '-' : '+'}{formatCurrency(t.amount)}
+                  <td className={`px-4 py-3 font-medium ${
+                    t.class_type === '수입' ? 'text-blue-600' :
+                    t.class_type === '이체' ? 'text-gray-500' :
+                    'text-red-600'
+                  }`}>
+                    {t.class_type === '이체' ? '' : t.class_type === '지출' ? '-' : '+'}{formatCurrency(t.amount)}
                   </td>
                   <td className="px-4 py-3 text-gray-500 max-w-24 truncate">{t.memo ?? '-'}</td>
                   <td className="px-4 py-3">

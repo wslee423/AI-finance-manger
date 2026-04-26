@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { type Dividend } from '@/types'
-import { formatCurrency, formatDate, getTodayStr } from '@/lib/utils'
+import { formatCurrency, formatDate, getTodayStr, getYearOptions } from '@/lib/utils'
 import Toast from '@/components/ui/Toast'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 
@@ -136,7 +136,7 @@ export default function DividendPage() {
       {/* 연도 선택 */}
       <div className="flex gap-2 mb-4">
         <select value={year} onChange={e => setYear(Number(e.target.value))} className="px-3 py-2 text-sm border border-gray-300 rounded-lg">
-          {[2023,2024,2025,2026].map(y => <option key={y} value={y}>{y}년</option>)}
+          {getYearOptions(2023).map(y => <option key={y} value={y}>{y}년</option>)}
         </select>
         <div className="px-4 py-2 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800 font-medium">
           {year}년 총 배당금: {formatCurrency(totalKrw)}

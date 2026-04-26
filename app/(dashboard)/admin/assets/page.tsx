@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { type Asset, type AssetType, type AssetOwner, ASSET_OWNERS } from '@/types'
-import { formatCurrency, getMonthLastDay } from '@/lib/utils'
+import { formatCurrency, getMonthLastDay, getYearOptions } from '@/lib/utils'
 import Toast from '@/components/ui/Toast'
 
 const ASSET_TYPES: AssetType[] = ['부동산', '통장', '연금', '예적금', '기타', '대출']
@@ -138,7 +138,7 @@ export default function AssetsPage() {
       {/* 기간 선택 */}
       <div className="flex gap-2 mb-4">
         <select value={year} onChange={e => setYear(Number(e.target.value))} className="px-3 py-2 text-sm border border-gray-300 rounded-lg">
-          {[2022,2023,2024,2025,2026].map(y => <option key={y} value={y}>{y}년</option>)}
+          {getYearOptions().map(y => <option key={y} value={y}>{y}년</option>)}
         </select>
         <select value={month} onChange={e => setMonth(Number(e.target.value))} className="px-3 py-2 text-sm border border-gray-300 rounded-lg">
           {Array.from({length:12},(_,i)=>i+1).map(m => <option key={m} value={m}>{m}월</option>)}

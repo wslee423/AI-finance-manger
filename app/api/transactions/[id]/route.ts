@@ -1,26 +1,22 @@
 import { createClient } from '@/lib/supabase/server'
+import { getAuthUser, unauthorized, serverError } from '@/lib/api'
 import { NextResponse } from 'next/server'
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const user = await getAuthUser()
+  if (!user) return unauthorized()
 
+  const supabase = await createClient()
   const { id } = await params
   const body = await request.json()
 
   const { data, error } = await supabase
-    .from('transactions')
-    .update(body)
-    .eq('id', id)
-    .is('deleted_at', null)
-    .select()
-    .single()
+    .from('transactions').update(body).eq('id', id).is('deleted_at', null).select().single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return serverError(error.message)
   return NextResponse.json(data)
 }
 
@@ -28,18 +24,15 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const user = await getAuthUser()
+  if (!user) return unauthorized()
 
+  const supabase = await createClient()
   const { id } = await params
 
-  // soft delete — hard delete 절대 금지
   const { error } = await supabase
-    .from('transactions')
-    .update({ deleted_at: new Date().toISOString() })
-    .eq('id', id)
+    .from('transactions').update({ deleted_at: new Date().toISOString() }).eq('id', id)
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return serverError(error.message)
   return NextResponse.json({ success: true })
 }

@@ -15,7 +15,7 @@
 | Phase | 이름 | 기간 | 상태 |
 |-------|------|------|------|
 | Phase 1 | 기반 세팅 | 2주 | ✅ |
-| Phase 2 | 데이터 관리 (Admin) | 3주 | 🔲 |
+| Phase 2 | 데이터 관리 (Admin) | 3주 | ✅ |
 | Phase 3 | 재정 대시보드 | 3주 | 🔲 |
 | Phase 4 | AI 재정 에이전트 | 3주 | 🔲 |
 | Phase 5 | 텔레그램 봇 | 2주 | 🔲 |
@@ -49,24 +49,25 @@
 ## Phase 2 — 데이터 관리 (Admin)
 
 **Phase Gate**
-- [ ] 수입/지출 CRUD 동작 (단건 입력, 수정, soft delete)
-- [ ] 고정지출 preset 불러오기 → 일괄 저장 동작
-- [ ] 자산 월별 스냅샷 입력 (직전 월 불러오기 + 저장)
-- [ ] 배당금 입력 동작
-- [ ] 마이그레이션 스크립트 실행 완료 (기존 구글시트 데이터 → Supabase)
-- [ ] 월말 자동 백업 스크립트 동작 (Vercel Cron → 구글시트 append)
-- [ ] 모바일 뷰에서 기본 입력 가능
-- [ ] `npm run typecheck && npm run lint` 경고 0건
+- [x] 수입/지출 CRUD 동작 (단건 입력, 수정, soft delete)
+- [x] 파일 업로드 일괄 입력 기능 (xlsx/csv → preview → bulk insert)
+- [x] 고정지출 preset 불러오기 → 일괄 저장 동작
+- [x] 자산 월별 스냅샷 입력 (직전 월 불러오기 + 저장)
+- [x] 배당금 입력 동작 (환율 자동 조회 포함)
+- [x] 마이그레이션 스크립트 실행 완료 (transactions 3,147건 / assets 819건 / dividend 196건)
+- [x] `npm run typecheck && npm run lint` 경고 0건
+- [ ] 월말 자동 백업 스크립트 (Phase 3 이후로 이월)
 
 **작업 목록**
-- [ ] 수입/지출 입력 폼 + 목록 페이지 (`/admin/transactions`)
-- [ ] 고정지출 preset 불러오기 (체크박스 선택 → 일괄 insert)
-- [ ] 자산 스냅샷 입력 페이지 (`/admin/assets`)
-- [ ] 배당금 입력 페이지 (`/admin/dividend`) — OD-002 결정 후 환율 처리 확정
-- [ ] 고정지출 템플릿 관리 (`/admin/presets`)
-- [ ] 1회성 마이그레이션 스크립트 (구글시트 CSV → Supabase, upsert 방식)
-- [ ] 월말 자동 백업 (Vercel Cron `0 15 1 * *` UTC → 구글시트 append)
-  - 텔레그램 알림은 Phase 5 완료 후 추가. Phase 2에서는 이메일 또는 로그로 대체.
+- [x] 수입/지출 입력 폼 + 목록 페이지 (`/admin/transactions`)
+- [x] 파일 업로드 일괄 입력 (`/api/transactions/import`)
+- [x] 고정지출 preset 불러오기 (체크박스 선택 → 일괄 insert)
+- [x] 자산 스냅샷 입력 페이지 (`/admin/assets`)
+- [x] 배당금 입력 페이지 (`/admin/dividend`)
+- [x] 고정지출 템플릿 관리 (`/admin/presets`)
+- [x] 1회성 마이그레이션 스크립트 (`scripts/migrate.ts`)
+- [x] API Route 인증 헬퍼 (`lib/api.ts`)
+- [ ] 월말 자동 백업 (Phase 3에서 구현)
 
 ---
 

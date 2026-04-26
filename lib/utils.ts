@@ -12,7 +12,17 @@ export function getMonthLastDay(year: number, month: number): string {
 }
 
 export function getTodayStr(): string {
-  return new Date().toISOString().split('T')[0]
+  const now = new Date()
+  const y = now.getFullYear()
+  const m = String(now.getMonth() + 1).padStart(2, '0')
+  const d = String(now.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+// 현재 연도부터 시작 연도까지 연도 목록 (동적)
+export function getYearOptions(startYear = 2022): number[] {
+  const currentYear = new Date().getFullYear()
+  return Array.from({ length: currentYear - startYear + 1 }, (_, i) => startYear + i)
 }
 
 export function getCurrentYearMonth(): { year: number; month: number } {

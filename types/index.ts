@@ -57,7 +57,8 @@ export interface PresetTemplate {
 }
 
 // 카테고리 정의
-export const CATEGORIES: Record<ClassType, string[]> = {
+// 신규 입력 폼에서는 수입/지출만 선택 (이체는 파일 업로드로만 입력)
+export const CATEGORIES: Record<'수입' | '지출', string[]> = {
   수입: ['주수입', '기타수입'],
   지출: ['고정지출', '변동지출', '기타지출'],
 }
