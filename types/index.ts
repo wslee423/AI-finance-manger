@@ -1,4 +1,4 @@
-export type ClassType = '수입' | '지출'
+export type ClassType = '수입' | '지출' | '이체'
 export type UserName = '운섭' | '아름' | '희온' | '공동'
 export type AssetOwner = '운섭' | '아름' | '공동'
 export type AssetType = '부동산' | '통장' | '연금' | '예적금' | '기타' | '대출'
