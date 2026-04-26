@@ -1,13 +1,16 @@
 import { createClient } from '@/lib/supabase/server'
 
+// Supabase 기본 제한 1000건 → 전체 데이터 조회를 위해 limit 명시
+const MAX_ROWS = 10000
+
 // ─── KPI ─────────────────────────────────────────────────────────────────────
 export async function getKpi(from?: string, to?: string) {
   const supabase = await createClient()
 
   let txQuery = supabase
     .from('transactions').select('class_type, amount')
-    .is('deleted_at', null).neq('class_type', '이체')
-  let divQuery = supabase.from('dividend').select('krw_amount')
+    .is('deleted_at', null).neq('class_type', '이체').limit(MAX_ROWS)
+  let divQuery = supabase.from('dividend').select('krw_amount').limit(MAX_ROWS)
 
   if (from) { txQuery = txQuery.gte('date', `${from}-01`); divQuery = divQuery.gte('date', `${from}-01`) }
   if (to) {
@@ -31,7 +34,7 @@ export async function getKpi(from?: string, to?: string) {
 export async function getMonthlySummary(from?: string, to?: string) {
   const supabase = await createClient()
   let q = supabase.from('transactions').select('date, class_type, amount')
-    .is('deleted_at', null).neq('class_type', '이체').order('date')
+    .is('deleted_at', null).neq('class_type', '이체').order('date').limit(MAX_ROWS)
   if (from) q = q.gte('date', `${from}-01`)
   if (to) { const [y, m] = to.split('-').map(Number); q = q.lte('date', `${to}-${new Date(y, m, 0).getDate()}`) }
 
@@ -51,7 +54,7 @@ export async function getMonthlySummary(from?: string, to?: string) {
 export async function getCategoryBreakdown(from?: string, to?: string) {
   const supabase = await createClient()
   let q = supabase.from('transactions').select('category, subcategory, amount')
-    .is('deleted_at', null).eq('class_type', '지출')
+    .is('deleted_at', null).eq('class_type', '지출').limit(MAX_ROWS)
   if (from) q = q.gte('date', `${from}-01`)
   if (to) { const [y, m] = to.split('-').map(Number); q = q.lte('date', `${to}-${new Date(y, m, 0).getDate()}`) }
 
@@ -77,7 +80,8 @@ export async function getCategoryBreakdown(from?: string, to?: string) {
 // ─── 순자산 히스토리 ──────────────────────────────────────────────────────────
 export async function getNetworthHistory() {
   const supabase = await createClient()
-  const { data } = await supabase.from('assets').select('snapshot_date, asset_type, balance').order('snapshot_date')
+  const { data } = await supabase.from('assets')
+    .select('snapshot_date, asset_type, balance').order('snapshot_date').limit(MAX_ROWS)
   const dateMap = new Map<string, { realestate: number; stocks: number; pension: number; savings: number; others: number; loans: number }>()
   for (const a of data ?? []) {
     const cur = dateMap.get(a.snapshot_date) ?? { realestate: 0, stocks: 0, pension: 0, savings: 0, others: 0, loans: 0 }
@@ -106,8 +110,9 @@ export async function getSavingsRate(from?: string, to?: string) {
 export async function getYearlyContribution() {
   const supabase = await createClient()
   const [{ data: tx }, { data: assets }] = await Promise.all([
-    supabase.from('transactions').select('date, class_type, amount').is('deleted_at', null).neq('class_type', '이체'),
-    supabase.from('assets').select('snapshot_date, balance').order('snapshot_date'),
+    supabase.from('transactions').select('date, class_type, amount')
+      .is('deleted_at', null).neq('class_type', '이체').limit(MAX_ROWS),
+    supabase.from('assets').select('snapshot_date, balance').order('snapshot_date').limit(MAX_ROWS),
   ])
 
   const savingsByYear = new Map<number, { income: number; expense: number }>()
@@ -145,7 +150,7 @@ export async function getYearlyContribution() {
 // ─── 배당금 요약 ──────────────────────────────────────────────────────────────
 export async function getDividendSummary() {
   const supabase = await createClient()
-  const { data } = await supabase.from('dividend').select('date, krw_amount').order('date')
+  const { data } = await supabase.from('dividend').select('date, krw_amount').order('date').limit(MAX_ROWS)
   const yearMap = new Map<number, number>()
   const pivotMap = new Map<string, number>()
   for (const d of data ?? []) {
@@ -173,13 +178,14 @@ export async function getDividendSummary() {
 // ─── 최근 자산 현황 ───────────────────────────────────────────────────────────
 export async function getRecentAssets(months = 5) {
   const supabase = await createClient()
-  const { data: allDates } = await supabase.from('assets').select('snapshot_date').order('snapshot_date', { ascending: false })
+  const { data: allDates } = await supabase.from('assets')
+    .select('snapshot_date').order('snapshot_date', { ascending: false }).limit(MAX_ROWS)
   const uniqueDates = [...new Set((allDates ?? []).map(d => d.snapshot_date))].slice(0, months).reverse()
   if (uniqueDates.length === 0) return { dates: [], assets: [], totals: [] }
 
   const { data } = await supabase.from('assets')
     .select('snapshot_date, asset_type, institution, balance')
-    .in('snapshot_date', uniqueDates).order('asset_type')
+    .in('snapshot_date', uniqueDates).order('asset_type').limit(MAX_ROWS)
 
   const institutionMap = new Map<string, { asset_type: string; balances: Map<string, number> }>()
   for (const a of data ?? []) {
@@ -198,11 +204,12 @@ export async function getRecentAssets(months = 5) {
 // ─── 개인별 순자산 ────────────────────────────────────────────────────────────
 export async function getPersonalNetworth() {
   const supabase = await createClient()
-  const { data: latest } = await supabase.from('assets').select('snapshot_date').order('snapshot_date', { ascending: false }).limit(1).single()
+  const { data: latest } = await supabase.from('assets')
+    .select('snapshot_date').order('snapshot_date', { ascending: false }).limit(1).single()
   if (!latest) return { snapshotDate: '', owner: [], spouse: [], ownerTotal: 0, spouseTotal: 0 }
 
   const { data } = await supabase.from('assets')
-    .select('asset_type, owner, balance, contribution_rate').eq('snapshot_date', latest.snapshot_date)
+    .select('asset_type, owner, balance, contribution_rate').eq('snapshot_date', latest.snapshot_date).limit(MAX_ROWS)
 
   const ownerMap = new Map<string, number>()
   const spouseMap = new Map<string, number>()

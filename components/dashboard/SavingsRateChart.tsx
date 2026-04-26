@@ -9,7 +9,7 @@ interface SavingsRateData {
   savingsRate: number
 }
 
-const TARGET_RATE = 30
+const TARGET_RATE = 70
 
 export default function SavingsRateChart({ data }: { data: SavingsRateData[] }) {
   if (data.length === 0) return <div className="flex items-center justify-center h-64 text-sm text-gray-400">데이터가 없습니다</div>
