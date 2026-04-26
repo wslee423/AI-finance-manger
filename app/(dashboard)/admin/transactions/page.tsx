@@ -6,6 +6,7 @@ import { formatCurrency, formatDate, getTodayStr, getCurrentYearMonth } from '@/
 import Toast from '@/components/ui/Toast'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import PresetModal from '@/components/admin/PresetModal'
+import ImportModal from '@/components/admin/ImportModal'
 
 const EMPTY_FORM = {
   date: getTodayStr(),
@@ -29,6 +30,7 @@ export default function TransactionsPage() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [editId, setEditId] = useState<string | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [showImport, setShowImport] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
   const fetchData = useCallback(async () => {
@@ -112,6 +114,9 @@ export default function TransactionsPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold text-gray-900">수입/지출</h1>
         <div className="flex gap-2">
+          <button onClick={() => setShowImport(true)} className="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+            📂 파일 업로드
+          </button>
           <button onClick={() => setShowPreset(true)} className="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
             고정지출 불러오기
           </button>
@@ -266,6 +271,17 @@ export default function TransactionsPage() {
           message="이 항목을 삭제할까요? (복구 가능)"
           onConfirm={() => handleDelete(deleteId)}
           onCancel={() => setDeleteId(null)}
+        />
+      )}
+
+      {showImport && (
+        <ImportModal
+          onClose={() => setShowImport(false)}
+          onSuccess={(count) => {
+            setShowImport(false)
+            fetchData()
+            setToast({ message: `${count}개 항목이 저장되었습니다`, type: 'success' })
+          }}
         />
       )}
 
