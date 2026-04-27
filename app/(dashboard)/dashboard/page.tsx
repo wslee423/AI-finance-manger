@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import {
   getKpi, getMonthlySummary, getCategoryBreakdown, getNetworthHistory,
   getSavingsRate, getYearlyContribution, getDividendSummary,
-  getRecentAssets, getPersonalNetworth,
+  getRecentAssets,
 } from '@/lib/dashboard/queries'
 import PeriodFilter from '@/components/dashboard/PeriodFilter'
 import KpiCards from '@/components/dashboard/KpiCards'
@@ -15,7 +15,6 @@ import SavingsRateChart from '@/components/dashboard/SavingsRateChart'
 import YearlyContribution from '@/components/dashboard/YearlyContribution'
 import DividendSection from '@/components/dashboard/DividendSection'
 import RecentAssets from '@/components/dashboard/RecentAssets'
-import PersonalNetWorth from '@/components/dashboard/PersonalNetWorth'
 
 function periodToRange(period: string): { from?: string; to?: string } {
   if (period === 'all') return {}
@@ -46,7 +45,7 @@ export default async function DashboardPage({
   const { from, to } = periodToRange(period)
 
   // 직접 함수 호출 — 서버 컴포넌트에서 API fetch 불필요
-  const [kpi, monthly, category, networth, savingsRate, yearly, dividend, recentAssets, personal] = await Promise.all([
+  const [kpi, monthly, category, networth, savingsRate, yearly, dividend, recentAssets] = await Promise.all([
     getKpi(from, to),
     getMonthlySummary(from, to),
     getCategoryBreakdown(from, to),
@@ -55,11 +54,10 @@ export default async function DashboardPage({
     getYearlyContribution(),
     getDividendSummary(),
     getRecentAssets(5),
-    getPersonalNetworth(),
   ])
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="max-w-screen-2xl mx-auto space-y-6">
       {/* 헤더 + 기간 필터 */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold text-gray-900">재정 대시보드</h1>
@@ -103,15 +101,10 @@ export default async function DashboardPage({
         <DividendSection data={dividend} />
       </Section>
 
-      {/* 최근 자산 현황 + 개인별 순자산 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Section title="최근 5개월 자산 현황">
-          <RecentAssets data={recentAssets} />
-        </Section>
-        <Section title="개인별 순자산">
-          <PersonalNetWorth data={personal} />
-        </Section>
-      </div>
+      {/* 최근 5개월 자산 현황 */}
+      <Section title="최근 5개월 자산 현황">
+        <RecentAssets data={recentAssets} />
+      </Section>
     </div>
   )
 }

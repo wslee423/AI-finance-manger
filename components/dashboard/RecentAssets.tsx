@@ -8,6 +8,14 @@ interface RecentAssetsData {
   totals: number[]
 }
 
+function fmt(b: number): string {
+  if (b === 0) return '—'
+  const abs = Math.abs(b)
+  if (abs >= 100000000) return `${(b / 100000000).toFixed(2)}억`
+  if (abs >= 10000) return `${(b / 10000).toFixed(0)}만`
+  return formatCurrency(b)
+}
+
 export default function RecentAssets({ data }: { data: RecentAssetsData }) {
   const { dates, assets, totals } = data
 
@@ -15,12 +23,12 @@ export default function RecentAssets({ data }: { data: RecentAssetsData }) {
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead className="bg-gray-50">
+      <table className="w-full text-sm whitespace-nowrap">
+        <thead className="bg-gray-50 border-b border-gray-200">
           <tr>
-            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">자산</th>
+            <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 min-w-40">자산</th>
             {dates.map(d => (
-              <th key={d} className="px-3 py-2 text-right text-xs font-medium text-gray-500">
+              <th key={d} className="px-4 py-2.5 text-right text-xs font-medium text-gray-500 min-w-28">
                 {d.slice(0, 7)}
               </th>
             ))}
@@ -29,24 +37,24 @@ export default function RecentAssets({ data }: { data: RecentAssetsData }) {
         <tbody className="divide-y divide-gray-100">
           {assets.map(a => (
             <tr key={a.institution} className="hover:bg-gray-50">
-              <td className="px-3 py-2">
-                <p className="text-gray-800 font-medium text-xs">{a.institution}</p>
-                <p className="text-gray-400 text-xs">{a.asset_type}</p>
+              <td className="px-4 py-2.5">
+                <span className="text-gray-800 font-medium text-xs">{a.institution}</span>
+                <span className="text-gray-400 text-xs ml-1.5">({a.asset_type})</span>
               </td>
               {a.balances.map((b, i) => (
-                <td key={i} className={`px-3 py-2 text-right text-xs ${b < 0 ? 'text-red-600' : 'text-gray-800'}`}>
-                  {b !== 0 ? (Math.abs(b) >= 100000000 ? `${(b / 100000000).toFixed(2)}억` : formatCurrency(b)) : '—'}
+                <td key={i} className={`px-4 py-2.5 text-right text-xs font-medium ${b < 0 ? 'text-red-600' : b === 0 ? 'text-gray-300' : 'text-gray-800'}`}>
+                  {fmt(b)}
                 </td>
               ))}
             </tr>
           ))}
         </tbody>
         <tfoot>
-          <tr className="bg-blue-50 font-semibold">
-            <td className="px-3 py-2 text-blue-800 text-sm">순자산 합계</td>
+          <tr className="bg-blue-50">
+            <td className="px-4 py-2.5 text-xs font-semibold text-blue-800">순자산 합계</td>
             {totals.map((t, i) => (
-              <td key={i} className="px-3 py-2 text-right text-blue-900 text-sm">
-                {(t / 100000000).toFixed(2)}억
+              <td key={i} className={`px-4 py-2.5 text-right text-xs font-bold ${t < 0 ? 'text-red-700' : 'text-blue-900'}`}>
+                {fmt(t)}
               </td>
             ))}
           </tr>
