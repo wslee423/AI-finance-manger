@@ -3,6 +3,7 @@
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts'
+import { formatAuk } from '@/lib/utils'
 
 interface NetWorthData {
   date: string
@@ -15,17 +16,12 @@ interface NetWorthData {
   netWorth: number
 }
 
-function formatAuk(value: number) {
-  if (Math.abs(value) >= 100000000) return `${(value / 100000000).toFixed(1)}억`
-  return String(value)
-}
-
 const AREAS = [
   { key: 'realestate', label: '부동산', color: '#3b82f6' },
-  { key: 'stocks', label: '통장', color: '#22c55e' },
-  { key: 'pension', label: '연금', color: '#8b5cf6' },
-  { key: 'savings', label: '예적금', color: '#f59e0b' },
-  { key: 'others', label: '기타', color: '#6b7280' },
+  { key: 'stocks',     label: '통장',   color: '#22c55e' },
+  { key: 'pension',    label: '연금',   color: '#8b5cf6' },
+  { key: 'savings',    label: '예적금', color: '#f59e0b' },
+  { key: 'others',     label: '기타',   color: '#6b7280' },
 ]
 
 export default function NetWorthChart({ data }: { data: NetWorthData[] }) {
@@ -39,7 +35,7 @@ export default function NetWorthChart({ data }: { data: NetWorthData[] }) {
         <YAxis tick={{ fontSize: 11 }} tickFormatter={formatAuk} />
         <Tooltip
           formatter={(v: number, name: string) => [
-            `${(v / 100000000).toFixed(2)}억`,
+            formatAuk(v),
             AREAS.find(a => a.key === name)?.label ?? name,
           ]}
           labelFormatter={v => v.slice(0, 7)}

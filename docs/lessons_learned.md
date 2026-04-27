@@ -123,3 +123,69 @@ export function getYearOptions(startYear = 2022): number[] {
 const { count } = await supabase.from('table').select('*', { count: 'exact', head: true })
 console.assert(count === expectedCount, `건수 불일치: ${count} !== ${expectedCount}`)
 ```
+
+---
+
+## Phase 3 — 재정 대시보드
+
+### ✅ 잘 된 것
+
+**서버 컴포넌트에서 직접 DB 쿼리 호출**
+- 초기에 서버 컴포넌트 → API fetch 방식으로 구현했다가 Internal Server Error 발생
+- `lib/dashboard/queries.ts`로 쿼리 로직 분리 후 서버 컴포넌트에서 직접 호출로 전환
+- API Routes는 Phase 4 AI Tool use용으로 별도 유지
+
+**fetchAll 페이지네이션 헬퍼**
+- Supabase 프로젝트 레벨 max-rows(기본 1000) 설정은 `.limit()`으로 오버라이드 불가
+- 1000건씩 `.range()`로 반복 조회하는 fetchAll 헬퍼로 해결
+
+---
+
+### ⚠️ 트러블슈팅
+
+**서버 컴포넌트에서 자기 자신의 API Route를 fetch하면 절대 URL 필요**
+- 개발 환경에서 `http://localhost:3000`이 맞지 않아 Internal Server Error
+- 해결: 서버 컴포넌트 → 직접 함수 호출 패턴 사용
+- 교훈: Next.js 서버 컴포넌트는 API Route를 경유하지 않고 직접 DB/함수 호출 권장
+
+**Supabase max-rows 1000 제한**
+- `.limit(10000)` 설정해도 프로젝트 설정값이 우선되어 1000건 고정
+- 해결: fetchAll 페이지네이션 헬퍼 (1000건씩 range 반복)
+- 교훈: Supabase 쿼리에서 전체 데이터 조회 시 항상 페이지네이션 고려
+
+**formatAuk 함수 4곳 중복**
+- MonthlyChart, NetWorthChart, DividendSection, DividendCumulativeChart에 각각 정의
+- 해결: `lib/utils.ts`에 공통 함수로 추출
+- 교훈: 차트 포맷 유틸은 처음부터 utils에 두고 import
+
+---
+
+### 재사용 가능한 패턴
+
+**Supabase 전체 데이터 조회 (max-rows 우회)**
+```typescript
+async function fetchAll<T>(supabase, table, columns, applyFilters) {
+  const PAGE = 1000
+  const result: T[] = []
+  let from = 0
+  while (true) {
+    const { data } = await applyFilters(supabase.from(table).select(columns)).range(from, from + PAGE - 1)
+    if (!data || data.length === 0) break
+    result.push(...data)
+    if (data.length < PAGE) break
+    from += PAGE
+  }
+  return result
+}
+```
+
+**차트 Y축 금액 포맷 (억/만 단위)**
+```typescript
+// lib/utils.ts
+export function formatAuk(value: number): string {
+  const abs = Math.abs(value)
+  if (abs >= 100000000) return `${(value / 100000000).toFixed(1)}억`
+  if (abs >= 10000) return `${(value / 10000).toFixed(0)}만`
+  return String(value)
+}
+```

@@ -29,3 +29,11 @@ export function getCurrentYearMonth(): { year: number; month: number } {
   const now = new Date()
   return { year: now.getFullYear(), month: now.getMonth() + 1 }
 }
+
+// 차트 Y축용 숫자 포맷 (억/만 단위)
+export function formatAuk(value: number): string {
+  const abs = Math.abs(value)
+  if (abs >= 100000000) return `${(value / 100000000).toFixed(1)}억`
+  if (abs >= 10000) return `${(value / 10000).toFixed(0)}만`
+  return String(value)
+}

@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, formatAuk } from '@/lib/utils'
 
 interface TickerData {
   symbol: string
@@ -18,12 +18,6 @@ interface Props {
 }
 
 const COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316', '#84cc16']
-
-function formatAuk(v: number) {
-  if (v >= 1000000) return `${(v / 10000).toFixed(0)}만`
-  if (v >= 10000) return `${(v / 10000).toFixed(1)}만`
-  return String(v)
-}
 
 export default function DividendTickerChart({ tickers, series }: Props) {
   const [selected, setSelected] = useState<Set<string>>(

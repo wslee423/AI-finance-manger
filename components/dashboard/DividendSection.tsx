@@ -3,7 +3,7 @@
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, formatAuk } from '@/lib/utils'
 
 interface DividendData {
   byYear: { year: number; total: number; monthlyAvg: number; growthRate: number | null }[]
@@ -12,11 +12,6 @@ interface DividendData {
 }
 
 const YEAR_COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6']
-
-function formatAuk(value: number) {
-  if (value >= 10000) return `${(value / 10000).toFixed(0)}만`
-  return String(value)
-}
 
 export default function DividendSection({ data }: { data: DividendData }) {
   const { byYear, pivot, years } = data
@@ -68,7 +63,7 @@ export default function DividendSection({ data }: { data: DividendData }) {
 
       {/* 피봇 테이블 */}
       <div className="overflow-x-auto">
-        <table className="w-full text-xs">
+        <table className="w-full text-xs whitespace-nowrap">
           <thead className="bg-gray-50">
             <tr>
               <th className="px-3 py-2 text-left text-gray-500">월</th>
@@ -86,7 +81,7 @@ export default function DividendSection({ data }: { data: DividendData }) {
                 ))}
               </tr>
             ))}
-            <tr className="bg-gray-50 font-medium">
+            <tr className="bg-gray-50 font-semibold">
               <td className="px-3 py-2 text-gray-700">합계</td>
               {years.map(y => {
                 const total = pivot.reduce((s, r) => s + Number(r[y] ?? 0), 0)

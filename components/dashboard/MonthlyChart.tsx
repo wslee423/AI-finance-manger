@@ -3,19 +3,13 @@
 import {
   ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, formatAuk } from '@/lib/utils'
 
 interface MonthlyData {
   month: string
   income: number
   expense: number
   savings: number
-}
-
-function formatAuk(value: number) {
-  if (Math.abs(value) >= 100000000) return `${(value / 100000000).toFixed(1)}억`
-  if (Math.abs(value) >= 10000) return `${(value / 10000).toFixed(0)}만`
-  return String(value)
 }
 
 export default function MonthlyChart({ data }: { data: MonthlyData[] }) {

@@ -1,6 +1,6 @@
 # NEXT_SESSION.md — 다음 세션 핸드오프
 
-**업데이트**: 2026-04-26
+**업데이트**: 2026-04-27
 
 ---
 
@@ -8,63 +8,82 @@
 
 - **Phase 1**: ✅ 완료 — Next.js + Supabase 기반 세팅
 - **Phase 2**: ✅ 완료 — Admin 데이터 입력 + 마이그레이션
-- **Phase 3**: 🔲 시작 전 — 재정 대시보드
+- **Phase 3**: ✅ 완료 — 재정 대시보드
+- **Phase 4**: 🔲 시작 전 — AI 재정 에이전트
 
 ---
 
-## Phase 2에서 완료한 것
+## Phase 3에서 완료한 것
 
-- Admin 4개 페이지: 수입/지출, 자산 스냅샷, 배당금, 고정지출 템플릿
-- 파일 업로드 일괄 입력 (xlsx/csv → preview → bulk insert)
-- 마이그레이션: transactions 3,147건 / assets 819건 / dividend 196건
-- API Route 인증 헬퍼 (`lib/api.ts`)
-- 코드 리뷰: 버그 7개 수정, 중복 코드 제거
+- 대시보드 페이지: KPI 카드 + 차트 9종 + 테이블
+- 기간 필터: 전체 / 연도별 / 월별 (URL 파라미터)
+- 섹션 그룹화: 📊 재정현황 / 🏦 자산현황 / 💰 배당금 (컬러 헤더)
+- 배당금 누적 차트 + 종목별 시계열 차트
+- `lib/dashboard/queries.ts` — 서버 컴포넌트 직접 호출 패턴
+- `fetchAll` 페이지네이션 헬퍼 (Supabase 1000건 제한 우회)
+- `formatAuk` 공통 유틸 추출 (4곳 중복 제거)
+- 코드 리뷰 후 PersonalNetWorth dead code 제거
 
 ---
 
-## Phase 3 — 재정 대시보드 시작 방법
+## Phase 4 — AI 재정 에이전트 시작 방법
 
-`product-specs/04-dashboard.md` 기준으로 구현.
+`docs/specs/05-ai-agent.md` 기준으로 구현.
+
+### 사전 준비
+
+**`.env.local`에 ANTHROPIC_API_KEY 입력 필수**
+```
+ANTHROPIC_API_KEY=sk-ant-...
+```
+키 발급: https://console.anthropic.com/settings/keys
 
 ### 구현 순서
 
-1. **API 9개** (`/api/dashboard/*`)
-   ```
-   GET /api/dashboard/kpi
-   GET /api/dashboard/monthly-summary
-   GET /api/dashboard/category-breakdown
-   GET /api/dashboard/networth-history
-   GET /api/dashboard/savings-rate
-   GET /api/dashboard/yearly-contribution
-   GET /api/dashboard/dividend-summary
-   GET /api/dashboard/recent-assets
-   GET /api/dashboard/personal-networth
-   ```
+1. **AI 에이전트 핵심 모듈** (`lib/anthropic/`)
+   - `prompts.ts` — 시스템 프롬프트 (가족 컨텍스트, 답변 원칙, 면책 문구 규칙)
+   - `tools.ts` — Tool use 정의 4종
+     - `query_transactions` — 가계부 거래 조회 (기간/카테고리/사용자 필터)
+     - `query_assets` — 자산 스냅샷 조회
+     - `query_dividend` — 배당금 조회
+     - `calculate_summary` — 저축률·증감률·목표 달성률 계산
+   - `agent.ts` — Tool use 처리 루프 (history slice 20개 제한 — OD-004)
 
-2. **대시보드 페이지** (`app/(dashboard)/dashboard/page.tsx`)
-   - KPI 카드 4개 (총수입, 총지출, 저축률, 총배당금)
-   - 월별 수입/지출 막대 차트
-   - 지출 카테고리 도넛 차트
-   - 순자산 성장 영역 차트
-   - 배당금 분석 섹션
-   - 개인별 순자산 (Owner/Spouse)
+2. **API Route** (`app/api/chat/route.ts`)
+   - SSE 스트리밍 응답
+   - 인증 + 사용자 메시지 → AI → Tool 호출 → 답변
 
-3. **기간 필터** — URL 파라미터 연동, 전 차트 공통 적용
+3. **채팅 UI** (`app/(dashboard)/chat/page.tsx`)
+   - 스트리밍 메시지 출력
+   - 빠른 질문 버튼 4개 (이번달 지출/순자산/배당금/저축률)
+   - Tool 호출 중 로딩 표시 ("데이터 조회 중...")
+   - 마크다운 렌더링
+
+4. **Phase Gate 검증**
+   - "지난달 외식비 얼마야?" → 정확한 금액 반환
+   - "올해 경조사 내역 보여줘" → 목록 반환
+   - "배당금 월 100만원 목표까지 얼마나 남았어?" → 계산 후 답변
+   - 투자 질문 시 면책 문구 자동 추가
+   - 데이터 없는 기간 질문 → "데이터가 없어요"
 
 ### 주의사항
 
-- 이체(`class_type = '이체'`) 거래는 수입/지출 집계에서 **반드시 제외**
-- `assets` 테이블은 월말 스냅샷 → 추이 계산 시 `snapshot_date`로 정렬
-- 개인별 순자산: 공동 자산은 `contribution_rate`로 각자 지분 계산
-- recharts 이미 설치됨
+- **CONSTITUTION 원칙 3** 엄수: AI는 생활 비서이며 투자/세무 자문이 아님
+- **Tool use 결과는 raw JSON 반환 금지** — 에이전트가 가공 후 답변
+- **이체(`class_type='이체'`)는 수입/지출 집계에서 제외** (이미 dashboard queries에 적용됨)
+- **API Routes 재활용 가능** — `app/api/dashboard/*`, `app/api/transactions/*` 등을 Tool에서 활용 가능 (직접 DB 호출도 가능)
+- **모델**: `claude-sonnet-4-5`
 
 ---
 
 ## 이월된 작업
 
-- **월말 자동 백업** (Vercel Cron → 구글시트 append) — Phase 3 또는 6에서 구현
-  - `03-backup.md` 스펙 참고
-  - `CRON_SECRET`, `GOOGLE_SERVICE_ACCOUNT_JSON`, `BACKUP_SPREADSHEET_ID` 환경변수 미설정
+- **월말 자동 백업** (Vercel Cron → 구글시트 append) — Phase 6 안정화에서 구현
+  - `docs/specs/03-backup.md` 스펙 참고
+  - 환경변수 미설정: `CRON_SECRET`, `GOOGLE_SERVICE_ACCOUNT_JSON`, `BACKUP_SPREADSHEET_ID`
+- **저축률 목표 설정 페이지** — 현재 `SavingsRateChart`에 70% 하드코딩
+  - 기술 부채 등록 후 추후 설정 UI 추가
+- **배당금 환율 자동 조회** — `EXCHANGE_RATE_API_KEY` 미설정 (현재 수동 입력)
 
 ---
 
@@ -74,10 +93,11 @@
 ✅ NEXT_PUBLIC_SUPABASE_URL
 ✅ NEXT_PUBLIC_SUPABASE_ANON_KEY
 ✅ SUPABASE_SERVICE_ROLE_KEY
-❌ ANTHROPIC_API_KEY          ← Phase 4 전 필요
-❌ TELEGRAM_BOT_TOKEN          ← Phase 5 전 필요
+❌ ANTHROPIC_API_KEY          ← Phase 4 전 필요 ⭐
 ❌ EXCHANGE_RATE_API_KEY       ← 배당금 환율 자동조회용 (현재 수동 입력)
-❌ CRON_SECRET                 ← 월말 백업용
-❌ GOOGLE_SERVICE_ACCOUNT_JSON ← 월말 백업용
-❌ BACKUP_SPREADSHEET_ID       ← 월말 백업용
+❌ TELEGRAM_BOT_TOKEN          ← Phase 5 전 필요
+❌ TELEGRAM_ALLOWED_CHAT_IDS   ← Phase 5 전 필요
+❌ CRON_SECRET                 ← Phase 6 백업용
+❌ GOOGLE_SERVICE_ACCOUNT_JSON ← Phase 6 백업용
+❌ BACKUP_SPREADSHEET_ID       ← Phase 6 백업용
 ```

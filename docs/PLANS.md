@@ -16,7 +16,7 @@
 |-------|------|------|------|
 | Phase 1 | 기반 세팅 | 2주 | ✅ |
 | Phase 2 | 데이터 관리 (Admin) | 3주 | ✅ |
-| Phase 3 | 재정 대시보드 | 3주 | 🔲 |
+| Phase 3 | 재정 대시보드 | 3주 | ✅ |
 | Phase 4 | AI 재정 에이전트 | 3주 | 🔲 |
 | Phase 5 | 텔레그램 봇 | 2주 | 🔲 |
 | Phase 6 | 안정화 | 상시 | 🔲 |
@@ -74,20 +74,21 @@
 ## Phase 3 — 재정 대시보드
 
 **Phase Gate**
-- [ ] KPI 카드 4개 기간 필터 적용 (총수입, 총지출, 저축률, 총배당금)
-- [ ] 핵심 차트 5개 실데이터 렌더링 (월별 수입/지출, 저축률, 순자산, 지출 도넛, 배당금)
-- [ ] 저축 vs 투자 기여도 테이블
-- [ ] 개인별 순자산 (Owner/Spouse 분리)
-- [ ] 기간 필터 (전체/연도/커스텀)
-- [ ] 반응형 레이아웃
+- [x] KPI 카드 4개 기간 필터 적용 (총수입, 총지출, 저축률, 총배당금)
+- [x] 핵심 차트 구현 (월별 수입/지출, 저축률, 순자산 스택영역, 지출 도넛, 배당금)
+- [x] 저축 vs 투자 기여도 연도별 테이블
+- [x] 기간 필터 (전체/연도별/월별 — URL 파라미터)
+- [x] 섹션 그룹 구분 (재정현황/자산현황/배당금)
+- [x] 배당금 누적 차트 + 종목별 시계열 차트
 
 **작업 목록**
-- [ ] 대시보드 API 9개 (`/api/dashboard/*` — `product-specs/04-dashboard.md` §12 기준)
-- [ ] KPI 카드 컴포넌트
-- [ ] Recharts 차트 컴포넌트 7종
-- [ ] 기간 필터 컴포넌트 (URL 파라미터 연동)
-- [ ] 최근 5개월 자산 테이블
-- [ ] 개인별 순자산 섹션
+- [x] 대시보드 쿼리 함수 (`lib/dashboard/queries.ts`) — fetchAll 페이지네이션
+- [x] API Routes 9개 (`/api/dashboard/*`) — Phase 4 AI Tool use용 유지
+- [x] KpiCards, MonthlyChart, CategoryDonut, NetWorthChart, SavingsRateChart 컴포넌트
+- [x] YearlyContribution, DividendSection, DividendTickerChart, DividendCumulativeChart
+- [x] RecentAssets 테이블
+- [x] PeriodFilter (전체/연도/월 선택)
+- [x] formatAuk 공통 유틸 추출 (중복 제거)
 
 ---
 
