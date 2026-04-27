@@ -11,13 +11,14 @@
 create table transactions (
   id            uuid primary key default gen_random_uuid(),
   date          date not null,
-  class_type    text not null check (class_type in ('수입', '지출')),
+  class         text not null check (class in ('수입', '지출', '이체')),
+  type          text not null check (type in ('주수입', '기타수입', '고정지출', '변동지출', '기타지출', '저축/투자')),
   category      text not null,
   subcategory   text,
   item          text,
-  user_name     text check (user_name in ('Owner', 'Spouse', 'Child', 'Shared')),
+  user_name     text check (user_name in ('운섭', '아름', '희온', '공동')),
   memo          text,
-  amount        bigint not null check (amount > 0),  -- 원화, 항상 양수
+  amount        bigint not null default 0,  -- 원화. 0 허용 (실제 migration에서 수정됨)
   tags          text[],                               -- ex. '{#육아, #주식매도}'
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now(),
@@ -32,13 +33,14 @@ create index idx_tr_active   on transactions (deleted_at) where deleted_at is nu
 
 **카테고리 기준값**
 
-| class_type | category | subcategory 예시 |
-|-----------|---------|----------------|
-| 수입 | 주수입 | 월급, 성과금, 상여금 |
-| 수입 | 기타수입 | 양육수당, 보험금, 중고판매 |
-| 지출 | 고정지출 | 보험, 용돈, 관리비, 통신비, 구독/멤버십, 교통/차량 |
-| 지출 | 변동지출 | 마트/편의점, 외식비, 의류/미용, 여가비, 병원비 |
-| 지출 | 기타지출 | 경조사, 기타 |
+| class | type | category | subcategory 예시 |
+|-------|------|----------|---------------|
+| 수입 | 주수입 | — | 월급, 성과금, 상여금 |
+| 수입 | 기타수입 | — | 양육수당, 보험금, 중고판매 |
+| 지출 | 고정지출 | 보험, 용돈, 관리비, 통신비, 구독/멤버십 | — |
+| 지출 | 변동지출 | 마트/편의점, 외식비, 의류/미용, 여가비, 병원비 | — |
+| 지출 | 기타지출 | 경조사, 기타 | — |
+| 이체 | 저축/투자 | — | — |
 
 ---
 
@@ -50,7 +52,8 @@ create table assets (
   snapshot_date     date not null,
   asset_type        text not null check (asset_type in ('부동산', '통장', '연금', '예적금', '기타', '대출')),
   institution       text not null,
-  owner             text not null check (owner in ('Owner', 'Spouse', 'Shared')),
+  owner             text not null check (owner in ('운섭', '아름', '공동')),
+  memo              text,
   balance           bigint not null,  -- 원화. 대출은 음수로 기록.
   contribution_rate numeric(5,4),     -- 공동 자산의 Owner 기여 비율 (0~1). null = 단독 자산.
   created_at        timestamptz not null default now()
@@ -119,7 +122,7 @@ create table preset_templates (
   category      text not null default '고정지출',
   subcategory   text,
   item          text,
-  user_name     text check (user_name in ('Owner', 'Spouse', 'Child', 'Shared')),
+  user_name     text check (user_name in ('운섭', '아름', '희온', '공동')),
   memo          text,
   amount        bigint not null check (amount >= 0),  -- 0 허용 (관리비 등 매달 변동)
   sort_order    int default 0,

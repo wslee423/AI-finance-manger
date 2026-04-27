@@ -1,80 +1,121 @@
-# NEXT_SESSION.md — 다음 세션 핸드오프
+# NEXT_SESSION.md — 핸드오프 (2026-04-27)
 
-**업데이트**: 2026-04-27
-
----
-
-## 현재 상태
-
-- **Phase 1**: ✅ 완료 — Next.js + Supabase 기반 세팅
-- **Phase 2**: ✅ 완료 — Admin 데이터 입력 + 마이그레이션
-- **Phase 3**: ✅ 완료 — 재정 대시보드
-- **Phase 4**: 🔄 진행 중 — AI 재정 에이전트 (채팅 UI + API 구현 완료)
+> 이전 세션에서 완료한 내용 및 다음 세션 시작점.
 
 ---
 
-## Phase 3에서 완료한 것
+## 현황 (Phase 4 완료, Phase 5 시작)
 
-- 대시보드 페이지: KPI 카드 + 차트 9종 + 테이블
-- 기간 필터: 전체 / 연도별 / 월별 (URL 파라미터)
-- 섹션 그룹화: 📊 재정현황 / 🏦 자산현황 / 💰 배당금 (컬러 헤더)
-- 배당금 누적 차트 + 종목별 시계열 차트
-- `lib/dashboard/queries.ts` — 서버 컴포넌트 직접 호출 패턴
-- `fetchAll` 페이지네이션 헬퍼 (Supabase 1000건 제한 우회)
-- `formatAuk` 공통 유틸 추출 (4곳 중복 제거)
-- 코드 리뷰 후 PersonalNetWorth dead code 제거
-
----
-
-## Phase 4 — AI 재정 에이전트 (구현 완료)
-
-### 구현된 파일
-- `lib/openai/prompts.ts` — 시스템 프롬프트
-- `lib/openai/tools.ts` — Tool 정의 4종 + 실행 함수
-- `app/api/chat/route.ts` — SSE 스트리밍 API (gpt-5.1 사용)
-- `app/(dashboard)/chat/page.tsx` — 채팅 UI
-
-### 사용 모델 결정 사항
-- **모델**: `gpt-5.1` (gpt-4o 대비 28% 저렴, Input $1.25/1M)
-- **query_assets**: asset_type별 합계 압축 반환 (institution 행 수십 개 → byType 6개)
-- **history**: 20개 유지 (OD-004)
-- **list aggregate**: 최대 10건 강제 제한
-
-### Phase Gate 검증 필요
-- [ ] `npm run dev` 후 `/chat` 진입 확인
-- [ ] "지난달 외식비 얼마야?" → 정확한 금액 반환
-- [ ] "올해 경조사 내역 보여줘" → 목록 반환
-- [ ] "배당금 월 100만원 목표까지 얼마나 남았어?" → 계산 후 답변
-- [ ] 투자 질문 시 면책 문구 자동 추가
-- [ ] 데이터 없는 기간 질문 → "데이터가 없어요"
-
-### 다음 할 것
-- Phase Gate 통과 확인 후 → Phase 5 (텔레그램 봇) 진입
+| Phase | 이름 | 상태 | 설명 |
+|-------|------|------|------|
+| Phase 1 | 기반 세팅 | ✅ | Next.js + Supabase 기반 완료 |
+| Phase 2 | Admin 데이터 입력 | ✅ | 가계부/자산/배당금 입력 완료, 3,147건 마이그레이션 |
+| Phase 3 | 재정 대시보드 | ✅ | KPI 카드, 차트, 태그별 지출 Top 10 완료 |
+| Phase 4 | AI 재정 에이전트 | ✅ | 웹 채팅 UI + OpenAI API (gpt-5.1) 완료, Phase Gate 검증 필요 |
+| Phase 5 | 텔레그램 봇 | 🔲 | **다음 단계** — 스펙 및 구현 필요 |
+| Phase 6 | 안정화 | 🔲 | 백업 스크립트, 모니터링 등 |
 
 ---
 
-## 이월된 작업
+## Phase 4 완료 내용
 
-- **월말 자동 백업** (Vercel Cron → 구글시트 append) — Phase 6 안정화에서 구현
-  - `docs/specs/03-backup.md` 스펙 참고
-  - 환경변수 미설정: `CRON_SECRET`, `GOOGLE_SERVICE_ACCOUNT_JSON`, `BACKUP_SPREADSHEET_ID`
-- **저축률 목표 설정 페이지** — 현재 `SavingsRateChart`에 70% 하드코딩
-  - 기술 부채 등록 후 추후 설정 UI 추가
-- **배당금 환율 자동 조회** — `EXCHANGE_RATE_API_KEY` 미설정 (현재 수동 입력)
+**구현됨:**
+- `/chat` 페이지: 채팅 UI (메시지 입력/표시, SSE 스트리밍)
+- `/api/chat` Route: OpenAI API (gpt-5.1) 통합, Tool use + 에러 핸들링
+- Tool 4종: `query_transactions`, `query_assets`, `query_dividend`, `calculate_summary`
+- 시스템 프롬프트: 430토큰 (최적화 완료), 핵심 5개 매핑만 유지
+- DB 스키마: `class`/`type` 분리, `user_name` 한글 (운섭, 아름, 희온, 공동)
+- 태그 기능: 자유 입력 UI + 대시보드 태그별 지출 Top 10 추가
+- 마이그레이션: 3,151 transactions, 819 assets, 196 dividends 모두 정상
+
+**Phase Gate 검증 필요 (구현은 완료):**
+- [ ] 채팅 UI 스트리밍 응답 테스트
+- [ ] Tool use 4종 정확성 검증 ("지난달 외식비", "경조사", "배당금 목표" 등)
+- [ ] 면책 문구 조건부 적용 (투자 질문만)
+- [ ] 데이터 없는 기간 응답 확인
 
 ---
 
-## 환경 설정 상태
+## 환경 변수 (현재 상태)
 
+| 변수 | 필요 | 상태 |
+|------|------|------|
+| `NEXT_PUBLIC_SUPABASE_URL` | ✅ | 설정됨 |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ | 설정됨 |
+| `SUPABASE_SERVICE_ROLE_KEY` | ✅ | 설정됨 |
+| `OPENAI_API_KEY` | ✅ | **필수 (Phase 4)** — 설정 확인 필요 |
+| `TELEGRAM_BOT_TOKEN` | ✅ | **Phase 5 필요** |
+| `TELEGRAM_ALLOWED_CHAT_IDS` | ✅ | **Phase 5 필요** |
+| `GOOGLE_SERVICE_ACCOUNT_JSON` | ✅ | Phase 6 백업용 |
+| `BACKUP_SPREADSHEET_ID` | ✅ | Phase 6 백업용 |
+| `CRON_SECRET` | ✅ | Phase 6 백업용 |
+
+---
+
+## 이월된 기술 부채
+
+| 항목 | 상태 | Phase |
+|------|------|-------|
+| 월말 자동 백업 스크립트 | 🔲 | Phase 6 |
+| `any` 타입 사용 (tools.ts) | 🔲 | Phase 6 |
+| tags: DB/코드 타입 불일치 | ⚠️ 운영 중 | Tech Debt |
+| 문서 정합성 (스펙 vs 코드) | ⚠️ | 검토 진행 중 |
+
+---
+
+## 다음 단계: Phase 5 (텔레그램 봇)
+
+**선행 조건:**
+1. `TELEGRAM_BOT_TOKEN` 획득 (BotFather에서)
+2. `TELEGRAM_ALLOWED_CHAT_IDS` 획득 (소유자·배우자 chat_id)
+3. 스펙 문서 작성: `docs/specs/06-telegram-bot.md`
+
+**구현 항목:**
+1. POST `/api/telegram/webhook` 라우트
+2. chat_id → user_name 인증 매핑
+3. 웹 AI 로직 재사용 (`lib/openai/tools.ts`)
+4. 빠른 명령어: `/이번달`, `/순자산`, `/배당금`
+5. Vercel 대시보드에서 Webhook URL 등록
+
+---
+
+## 최근 작업 (2026-04-27)
+
+1. **문서 전체 검토**: 37개 문제 식별 (모순 16개, 불일치 12개, 모호 3개, 코드 6개)
+2. **프롬프트 최적화**: 900 → 430토큰 (52% 절감, $5/월 비용 절감)
+3. **답변 길이 제한**: 간단한 질문은 2-3문장, 목록은 5개 이내
+4. **문서 동기화**: Anthropic → OpenAI, 파일 경로 통일 중
+
+---
+
+## 검증 항목
+
+**TypeScript / Lint:**
+```bash
+npm run typecheck  # 통과
+npm run lint       # 통과
 ```
-✅ NEXT_PUBLIC_SUPABASE_URL
-✅ NEXT_PUBLIC_SUPABASE_ANON_KEY
-✅ SUPABASE_SERVICE_ROLE_KEY
-❌ ANTHROPIC_API_KEY          ← Phase 4 전 필요 ⭐
-❌ EXCHANGE_RATE_API_KEY       ← 배당금 환율 자동조회용 (현재 수동 입력)
-❌ TELEGRAM_BOT_TOKEN          ← Phase 5 전 필요
-❌ TELEGRAM_ALLOWED_CHAT_IDS   ← Phase 5 전 필요
-❌ CRON_SECRET                 ← Phase 6 백업용
-❌ GOOGLE_SERVICE_ACCOUNT_JSON ← Phase 6 백업용
-❌ BACKUP_SPREADSHEET_ID       ← Phase 6 백업용
+
+**배포:**
+```bash
+npm run build   # Vercel에서 자동 실행
 ```
+
+---
+
+## 파일 구조 참조
+
+**AI 에이전트:**
+```
+lib/openai/
+├── prompts.ts     ← 시스템 프롬프트 (430토큰)
+├── tools.ts       ← Tool 정의 4종 + 실행 함수
+app/api/chat/route.ts  ← OpenAI API + SSE + Tool 루프
+app/(dashboard)/chat/page.tsx  ← 채팅 UI
+```
+
+**DB 스키마 (최신):**
+- `class`: 수입 / 지출 / 이체
+- `type`: 주수입, 기타수입, 고정지출, 변동지출, 저축/투자
+- `user_name`: 운섭, 아름, 희온, 공동
+- `tags`: 쉼표 구분 문자열 (예: `#육아,#주식매도`)

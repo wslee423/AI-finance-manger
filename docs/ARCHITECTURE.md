@@ -13,12 +13,12 @@
 | Language | TypeScript (strict) | 타입 안정성, AI 코딩 툴 친화적 |
 | Styling | Tailwind CSS | 빠른 UI 구성 |
 | DB / Auth | Supabase (PostgreSQL) | Auth 내장, RLS, 무료 티어 충분 |
-| AI | Anthropic Claude API (`claude-sonnet-4-20250514`) | Tool use 지원, 한국어 품질 |
+| AI | OpenAI API (gpt-5.1) | Tool use 지원, 비용 효율 |
 | 차트 | Recharts | React 친화적, TypeScript 지원 |
 | 배포 | Vercel | Next.js 최적화, Cron Job 지원 (Pro 플랜) |
 | 텔레그램 | node-telegram-bot-api | 경량, Webhook 지원 |
 
-> **주의**: Vercel Cron Job은 Pro 플랜 이상에서만 지원. 월말 자동 백업(Phase 2)에 필요.
+> **주의**: Vercel Cron Job은 Pro 플랜 이상에서만 지원. 월말 자동 백업(Phase 6)에 필요.
 
 ---
 
@@ -28,7 +28,7 @@
 
 | 테이블 | 역할 | 핵심 컬럼 |
 |--------|------|---------|
-| `transactions` | 가계부 원장 | date, class_type, category, amount, user_name, deleted_at |
+| `transactions` | 가계부 원장 | date, class, type, category, amount, user_name, deleted_at |
 | `assets` | 월별 자산 스냅샷 | snapshot_date, asset_type, institution, owner, balance, contribution_rate |
 | `dividend` | 배당금 수령 이력 | date, ticker_name, exchange_rate, usd_amount, krw_amount |
 | `preset_templates` | 고정지출 월별 입력용 템플릿 | name, category, amount, is_active |
@@ -58,7 +58,7 @@
 │       ├── assets/route.ts
 │       ├── dividend/route.ts
 │       ├── dashboard/[...]/route.ts
-│       ├── chat/route.ts           ← Anthropic API + SSE
+│       ├── chat/route.ts           ← OpenAI API + SSE
 │       ├── cron/monthly-backup/route.ts
 │       └── telegram/route.ts       ← Webhook
 │
@@ -73,8 +73,7 @@
 │   ├── supabase/
 │   │   ├── client.ts               ← 브라우저용
 │   │   └── server.ts               ← 서버 컴포넌트/API Route용
-│   ├── anthropic/
-│   │   ├── agent.ts                ← Tool use 처리 루프 (웹·텔레그램 공유)
+│   ├── openai/
 │   │   ├── tools.ts                ← Tool use 정의
 │   │   └── prompts.ts              ← 시스템 프롬프트
 │   ├── backup/
@@ -136,8 +135,8 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=        # 서버 전용. 클라이언트 절대 노출 금지.
 
-# Anthropic
-ANTHROPIC_API_KEY=                # 서버 전용.
+# OpenAI
+OPENAI_API_KEY=                   # 서버 전용.
 
 # Telegram
 TELEGRAM_BOT_TOKEN=               # 서버 전용.
@@ -156,7 +155,7 @@ BACKUP_SPREADSHEET_ID=            # 백업 구글시트 ID
 | 결정 | 선택 | 기각 대안 | 이유 |
 |------|------|----------|------|
 | DB | Supabase | Firebase | PostgreSQL 쿼리 유연성, RLS, AI Tool use 연동 |
-| AI | Anthropic | OpenAI | 한국어 품질, Tool use 정확도 |
+| AI | OpenAI (gpt-5.1) | Anthropic | 비용 효율(28% 저렴), Tool use 지원 |
 | 차트 | Recharts | Chart.js / Nivo | React·TypeScript 친화적 |
 | 배포 | Vercel | Railway | Next.js 최적화, Cron 내장 |
 | 동기화 | 월말 자동 백업 | 실시간 Google Sheets 동기화 | 단순성·안정성 우선 |

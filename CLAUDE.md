@@ -22,7 +22,7 @@
 | Framework | Next.js 15 App Router |
 | Language | TypeScript strict |
 | DB / Auth | Supabase (PostgreSQL + Auth + RLS) |
-| AI | Anthropic Claude API (`claude-sonnet-4-5`) |
+| AI | OpenAI API (gpt-5.1) |
 | 차트 | Recharts |
 | 배포 | Vercel (Pro 플랜 — Cron Job 필요) |
 | 텔레그램 | node-telegram-bot-api |
@@ -62,8 +62,8 @@ npm run test
 **핵심 파일 (테스트 없이 수정 금지)**
 ```
 lib/supabase/server.ts
-lib/anthropic/tools.ts
-lib/anthropic/prompts.ts
+lib/openai/tools.ts
+lib/openai/prompts.ts
 app/api/chat/route.ts
 ```
 
@@ -135,7 +135,7 @@ app/api/chat/route.ts
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=          # 서버 전용
-ANTHROPIC_API_KEY=                  # 서버 전용
+OPENAI_API_KEY=                     # 서버 전용
 TELEGRAM_BOT_TOKEN=                 # 서버 전용
 TELEGRAM_ALLOWED_CHAT_IDS=          # 허용 chat_id (콤마 구분)
 CRON_SECRET=                        # Vercel Cron 인증용

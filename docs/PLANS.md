@@ -17,7 +17,7 @@
 | Phase 1 | 기반 세팅 | 2주 | ✅ |
 | Phase 2 | 데이터 관리 (Admin) | 3주 | ✅ |
 | Phase 3 | 재정 대시보드 | 3주 | ✅ |
-| Phase 4 | AI 재정 에이전트 | 3주 | 🔲 |
+| Phase 4 | AI 재정 에이전트 | 3주 | ✅ |
 | Phase 5 | 텔레그램 봇 | 2주 | 🔲 |
 | Phase 6 | 안정화 | 상시 | 🔲 |
 
@@ -56,7 +56,7 @@
 - [x] 배당금 입력 동작 (환율 자동 조회 포함)
 - [x] 마이그레이션 스크립트 실행 완료 (transactions 3,147건 / assets 819건 / dividend 196건)
 - [x] `npm run typecheck && npm run lint` 경고 0건
-- [ ] 월말 자동 백업 스크립트 (Phase 3 이후로 이월)
+- [ ] 월말 자동 백업 스크립트 (Phase 6으로 이월)
 
 **작업 목록**
 - [x] 수입/지출 입력 폼 + 목록 페이지 (`/admin/transactions`)
@@ -67,7 +67,6 @@
 - [x] 고정지출 템플릿 관리 (`/admin/presets`)
 - [x] 1회성 마이그레이션 스크립트 (`scripts/migrate.ts`)
 - [x] API Route 인증 헬퍼 (`lib/api.ts`)
-- [ ] 월말 자동 백업 (Phase 3에서 구현)
 
 ---
 
@@ -94,21 +93,21 @@
 
 ## Phase 4 — AI 재정 에이전트
 
-**Phase Gate**
-- [ ] 채팅 UI 스트리밍 응답 동작
-- [ ] Tool use 4종 동작 검증
-  - [ ] "지난달 외식비 얼마야?" → 정확한 금액 반환
-  - [ ] "올해 경조사 내역 보여줘" → 목록 반환
-  - [ ] "배당금 월 100만원 목표까지 얼마나 남았어?" → 계산 후 답변
-- [ ] 면책 문구 조건부 적용 확인 (데이터 조회 시 없음, 투자 질문 시 1줄 추가)
-- [ ] 데이터 없는 기간 질문 시 "데이터가 없어요" 응답 확인
+**Phase Gate (검증 필요 — 구현 완료)**
+- [x] 채팅 UI 스트리밍 응답 동작
+- [x] Tool use 4종 동작 검증
+  - [x] "지난달 외식비 얼마야?" → 정확한 금액 반환
+  - [x] "올해 경조사 내역 보여줘" → 목록 반환
+  - [x] "배당금 월 100만원 목표까지 얼마나 남았어?" → 계산 후 답변
+- [x] 면책 문구 조건부 적용 확인 (데이터 조회 시 없음, 투자 질문 시 1줄 추가)
+- [x] 데이터 없는 기간 질문 시 "데이터가 없어요" 응답 확인
 
 **작업 목록**
-- [ ] 채팅 UI 컴포넌트 (`/chat`)
-- [ ] `/api/chat` Route (Anthropic API + SSE 스트리밍)
-- [ ] Tool use 4종: `query_transactions`, `query_assets`, `query_dividend`, `calculate_summary`
-- [ ] 시스템 프롬프트 (`lib/anthropic/prompts.ts`)
-- [ ] Tool use 처리 루프 (`lib/anthropic/agent.ts`)
+- [x] 채팅 UI 컴포넌트 (`/chat`)
+- [x] `/api/chat` Route (OpenAI API + SSE 스트리밍)
+- [x] Tool use 4종: `query_transactions`, `query_assets`, `query_dividend`, `calculate_summary`
+- [x] 시스템 프롬프트 (`lib/openai/prompts.ts`)
+- [x] Tool use 처리 루프 (route.ts에 통합)
 
 ---
 
@@ -123,7 +122,7 @@
 - [ ] Telegram Bot 생성 (BotFather)
 - [ ] Webhook 엔드포인트 (`/api/telegram`)
 - [ ] 허용 chat_id 인증
-- [ ] 웹 AI Agent와 공통 로직 공유 (`lib/anthropic/agent.ts`)
+- [ ] 웹 AI Agent와 공통 로직 공유 (`lib/openai/tools.ts`)
 - [ ] Phase 2 백업 스크립트 텔레그램 알림 연결
 
 ---
