@@ -1,4 +1,5 @@
 import { getAuthUser, unauthorized } from '@/lib/api'
+import { captureError, notifyTelegramOps, USER_ERROR_MESSAGE } from '@/lib/errors'
 import { getSystemPrompt } from '@/lib/openai/prompts'
 import { TOOLS, executeToolCall } from '@/lib/openai/tools'
 import OpenAI from 'openai'
@@ -97,7 +98,7 @@ export async function POST(request: Request) {
                   console.log(`[Result]`, JSON.stringify(result, null, 2))
                 }
               } catch (err) {
-                console.error(`[tool] ${tc.function.name} 실패:`, err)
+                captureError(err, { route: '/api/chat', feature: 'tool-call', userId: user.id })
                 result = { error: '데이터 조회에 실패했어요. 다시 시도해주세요.' }
               }
               messages.push({
@@ -114,8 +115,9 @@ export async function POST(request: Request) {
 
         controller.enqueue(sse({ type: 'done' }))
       } catch (error) {
-        console.error('[chat] 오류:', error)
-        controller.enqueue(sse({ type: 'error', content: '오류가 발생했어요. 잠시 후 다시 시도해주세요.' }))
+        const errorId = captureError(error, { route: '/api/chat', feature: 'ai-chat', userId: user.id })
+        void notifyTelegramOps(errorId, '/api/chat')
+        controller.enqueue(sse({ type: 'error', content: `${USER_ERROR_MESSAGE} (ID: ${errorId})` }))
       } finally {
         controller.close()
       }

@@ -1,6 +1,6 @@
+import { captureError, USER_ERROR_MESSAGE } from '@/lib/errors'
 import { askAgent } from '@/lib/openai/agent'
 
-// 텔레그램 Bot API 메시지 전송
 async function sendMessage(chatId: number, text: string) {
   const token = process.env.TELEGRAM_BOT_TOKEN!
   await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
@@ -10,12 +10,10 @@ async function sendMessage(chatId: number, text: string) {
   })
 }
 
-// 허용된 chat_id 목록
 function getAllowedIds(): string[] {
   return (process.env.TELEGRAM_ALLOWED_CHAT_IDS ?? '').split(',').map(s => s.trim()).filter(Boolean)
 }
 
-// 빠른 명령어 처리
 async function handleCommand(command: string): Promise<string> {
   switch (command) {
     case '/start':
@@ -34,6 +32,8 @@ async function handleCommand(command: string): Promise<string> {
 }
 
 export async function POST(request: Request) {
+  let chatId: number | undefined
+
   try {
     const body = await request.json() as {
       message?: { chat: { id: number }; text?: string }
@@ -42,20 +42,17 @@ export async function POST(request: Request) {
     const message = body.message
     if (!message?.text) return Response.json({ ok: true })
 
-    const chatId = message.chat.id
+    chatId = message.chat.id
     const allowedIds = getAllowedIds()
 
-    // 허용되지 않은 chat_id — 무시 (에러 반환 안 함)
-    if (!allowedIds.includes(String(chatId))) {
-      return Response.json({ ok: true })
-    }
+    if (!allowedIds.includes(String(chatId))) return Response.json({ ok: true })
 
     const text = message.text.trim()
     const reply = await handleCommand(text.startsWith('/') ? text.split(' ')[0] : text)
-
     await sendMessage(chatId, reply)
   } catch (err) {
-    console.error('[telegram] 오류:', err)
+    const errorId = captureError(err, { route: '/api/telegram', feature: 'telegram-bot' })
+    if (chatId) await sendMessage(chatId, `${USER_ERROR_MESSAGE} (ID: ${errorId})`).catch(() => {})
   }
 
   return Response.json({ ok: true })
