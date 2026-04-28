@@ -34,7 +34,7 @@ export async function askAgent(question: string, history: HistoryMessage[] = [])
         let result: unknown
         try {
           const args = JSON.parse(tc.function.arguments) as Record<string, unknown>
-          result = await executeToolCall(tc.function.name, args)
+          result = await executeToolCall(tc.function.name, args, { serviceRole: true })
         } catch {
           result = { error: '데이터 조회에 실패했어요.' }
         }

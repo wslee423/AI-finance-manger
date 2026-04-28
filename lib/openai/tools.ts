@@ -1,5 +1,6 @@
 import type { ChatCompletionTool } from 'openai/resources/chat/completions'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 
 // ─── Tool Definitions (OpenAI function calling format) ────────────────────────
 
@@ -115,12 +116,16 @@ function toDateRange(from: string, to?: string): { fromDate: string; toDate: str
 
 // ─── Tool Dispatcher ─────────────────────────────────────────────────────────
 
-export async function executeToolCall(name: string, args: Record<string, unknown>): Promise<unknown> {
+export async function executeToolCall(
+  name: string,
+  args: Record<string, unknown>,
+  { serviceRole = false } = {},
+): Promise<unknown> {
   switch (name) {
-    case 'query_transactions': return queryTransactions(args)
-    case 'query_assets': return queryAssets(args)
-    case 'query_dividend': return queryDividend(args)
-    case 'calculate_summary': return calculateSummary(args)
+    case 'query_transactions': return queryTransactions(args, serviceRole)
+    case 'query_assets': return queryAssets(args, serviceRole)
+    case 'query_dividend': return queryDividend(args, serviceRole)
+    case 'calculate_summary': return calculateSummary(args, serviceRole)
     default: throw new Error(`Unknown tool: ${name}`)
   }
 }
@@ -133,7 +138,9 @@ type TxArgs = {
   keyword?: string; aggregate?: string; limit?: number
 }
 
-async function runTxQuery(supabase: Awaited<ReturnType<typeof createClient>>, params: TxArgs & { fromDate: string; toDate: string }) {
+type AnySupabaseClient = ReturnType<typeof createServiceClient>
+
+async function runTxQuery(supabase: AnySupabaseClient, params: TxArgs & { fromDate: string; toDate: string }) {
   const { fromDate, toDate, class_type, category, subcategory, user_name, tags, keyword, aggregate = 'sum', limit = 10 } = params
   const safeLimit = Math.min(Number(limit), 10)
 
@@ -166,8 +173,8 @@ async function runTxQuery(supabase: Awaited<ReturnType<typeof createClient>>, pa
   return (data ?? []) as { amount: number; class: string }[]
 }
 
-async function queryTransactions(args: Record<string, unknown>) {
-  const supabase = await createClient()
+async function queryTransactions(args: Record<string, unknown>, serviceRole = false) {
+  const supabase = serviceRole ? createServiceClient() : await createClient()
   const parsed = args as TxArgs
   const { from, to, aggregate = 'sum' } = parsed
   const { fromDate, toDate } = toDateRange(from, to)
@@ -191,8 +198,8 @@ async function queryTransactions(args: Record<string, unknown>) {
 
 type AssetArgs = { snapshot_date?: string; owner?: string; asset_type?: string; history?: boolean }
 
-async function queryAssets(args: Record<string, unknown>) {
-  const supabase = await createClient()
+async function queryAssets(args: Record<string, unknown>, serviceRole = false) {
+  const supabase = serviceRole ? createServiceClient() : await createClient()
   const { snapshot_date, owner, asset_type, history } = args as AssetArgs
 
   if (history) {
@@ -254,8 +261,8 @@ async function queryAssets(args: Record<string, unknown>) {
 
 type DivArgs = { from?: string; to?: string; ticker?: string; aggregate?: string }
 
-async function queryDividend(args: Record<string, unknown>) {
-  const supabase = await createClient()
+async function queryDividend(args: Record<string, unknown>, serviceRole = false) {
+  const supabase = serviceRole ? createServiceClient() : await createClient()
   const { from, to, ticker, aggregate = 'total' } = args as DivArgs
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -307,8 +314,8 @@ async function queryDividend(args: Record<string, unknown>) {
 
 type SummaryArgs = { metric: string; params?: Record<string, unknown> }
 
-async function calculateSummary(args: Record<string, unknown>) {
-  const supabase = await createClient()
+async function calculateSummary(args: Record<string, unknown>, serviceRole = false) {
+  const supabase = serviceRole ? createServiceClient() : await createClient()
   const { metric, params = {} } = args as SummaryArgs
 
   if (metric === 'savings_rate') {
