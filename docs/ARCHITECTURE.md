@@ -15,10 +15,9 @@
 | DB / Auth | Supabase (PostgreSQL) | Auth 내장, RLS, 무료 티어 충분 |
 | AI | OpenAI API (gpt-5.1) | Tool use 지원, 비용 효율 |
 | 차트 | Recharts | React 친화적, TypeScript 지원 |
-| 배포 | Vercel | Next.js 최적화, Cron Job 지원 (Pro 플랜) |
-| 텔레그램 | node-telegram-bot-api | 경량, Webhook 지원 |
-
-> **주의**: Vercel Cron Job은 Pro 플랜 이상에서만 지원. 월말 자동 백업(Phase 6)에 필요.
+| 배포 | Vercel (Pro 플랜) | Next.js 최적화, Cron Job 지원 |
+| 텔레그램 | Telegram Bot API (Webhook) | 외부 패키지 없이 직접 fetch 사용 |
+| 에러 모니터링 | Sentry (@sentry/nextjs) | 서버 에러 캡처 + Telegram 운영 알림 |
 
 ---
 
@@ -53,40 +52,42 @@
 │   │   │   ├── dividend/page.tsx
 │   │   │   └── presets/page.tsx
 │   │   └── chat/page.tsx           ← AI 재정 에이전트
+│   ├── global-error.tsx            ← 글로벌 에러 바운더리
 │   └── api/
 │       ├── transactions/route.ts
 │       ├── assets/route.ts
 │       ├── dividend/route.ts
 │       ├── dashboard/[...]/route.ts
 │       ├── chat/route.ts           ← OpenAI API + SSE
-│       ├── cron/monthly-backup/route.ts
-│       └── telegram/route.ts       ← Webhook
+│       └── telegram/route.ts       ← Webhook (chat_id 인증)
 │
 ├── components/
-│   ├── ui/                         ← Button, Input, Card 등 원자 컴포넌트
+│   ├── ui/
 │   ├── charts/                     ← Recharts 래퍼
-│   ├── dashboard/                  ← KPI 카드, 대시보드 위젯
-│   ├── admin/                      ← 입력 폼
-│   └── chat/                       ← 채팅 UI
+│   ├── dashboard/
+│   ├── admin/
+│   └── chat/
 │
 ├── lib/
 │   ├── supabase/
 │   │   ├── client.ts               ← 브라우저용
-│   │   └── server.ts               ← 서버 컴포넌트/API Route용
+│   │   ├── server.ts               ← 서버 컴포넌트/API Route용
+│   │   └── service.ts              ← Service Role (RLS 우회, 텔레그램용)
 │   ├── openai/
-│   │   ├── tools.ts                ← Tool use 정의
-│   │   └── prompts.ts              ← 시스템 프롬프트
-│   ├── backup/
-│   │   └── sheets.ts               ← Google Sheets API append
-│   ├── telegram/
-│   │   └── bot.ts
-│   └── utils/
-│       └── format.ts               ← 금액·날짜 포맷
+│   │   ├── tools.ts                ← Tool use 정의 + executeToolCall
+│   │   ├── prompts.ts              ← 시스템 프롬프트
+│   │   └── agent.ts                ← non-streaming 에이전트 (텔레그램용)
+│   ├── errors.ts                   ← captureError + notifyTelegramOps
+│   ├── api.ts                      ← getAuthUser 헬퍼
+│   └── utils.ts                    ← formatAuk 등 공통 유틸
 │
 ├── types/
-│   └── index.ts                    ← Transaction, Asset, Dividend TypeScript 타입
+│   └── index.ts
 │
-└── docs/                           ← 프로젝트 문서 (이 파일들)
+├── sentry.client.config.ts         ← Sentry 브라우저 초기화
+├── sentry.server.config.ts         ← Sentry 서버 초기화 + beforeSend 필터
+├── instrumentation.ts              ← Next.js 서버 Sentry 등록
+└── docs/
 ```
 
 ---
@@ -109,20 +110,21 @@
 ## 5. 데이터 흐름
 
 ```
-[과거 데이터 마이그레이션 — 1회]
-구글시트 (2022.05~현재)
-    ↓ Node.js 스크립트 (CSV export → upsert)
-Supabase
+[과거 데이터 마이그레이션 — 1회 완료]
+구글시트 (2022.05~2026.04)
+    ↓ Node.js 스크립트 (scripts/migrate.ts)
+Supabase (transactions 3,151건 / assets 819건 / dividend 196건)
 
 [신규 데이터 — 지속]
 웹 Admin 입력 → Supabase → 대시보드 + AI 에이전트
+텔레그램 봇 질의 → AI 에이전트 → Supabase 조회 → 텔레그램 답변
 
-[월말 백업 — 자동]
-Vercel Cron (매달 1일 15:00 UTC = KST 00:00)
-    → Supabase 전월 데이터 조회
-    → 구글시트 백업 시트 append
-    → backup_logs 기록
-    → 텔레그램 알림 (Phase 5 이후)
+[에러 흐름]
+서버 에러 → Sentry 캡처 (민감 데이터 beforeSend 필터)
+           → Telegram 운영 알림 (TELEGRAM_OPS_CHAT_ID, production만)
+
+[월말 백업 — ⏸️ 홀딩]
+구현 보류 결정 (2026-04-28). 필요 시 Vercel Cron + Google Sheets API로 구현.
 ```
 
 ---
@@ -138,14 +140,21 @@ SUPABASE_SERVICE_ROLE_KEY=        # 서버 전용. 클라이언트 절대 노출
 # OpenAI
 OPENAI_API_KEY=                   # 서버 전용.
 
+# Sentry
+NEXT_PUBLIC_SENTRY_DSN=           # 에러 모니터링 DSN
+
 # Telegram
 TELEGRAM_BOT_TOKEN=               # 서버 전용.
 TELEGRAM_ALLOWED_CHAT_IDS=        # 허용 chat_id 목록 (콤마 구분)
+TELEGRAM_OPS_CHAT_ID=             # 운영 에러 알림 수신 (보통 Owner chat_id)
 
-# Backup
-CRON_SECRET=                      # Vercel Cron 인증용
-GOOGLE_SERVICE_ACCOUNT_JSON=      # 구글 서비스 계정 JSON (문자열화)
-BACKUP_SPREADSHEET_ID=            # 백업 구글시트 ID
+# 환율 API
+EXCHANGE_RATE_API_KEY=
+
+# 아래는 월말 자동 백업 구현 시 필요 (현재 홀딩)
+# CRON_SECRET=
+# GOOGLE_SERVICE_ACCOUNT_JSON=
+# BACKUP_SPREADSHEET_ID=
 ```
 
 ---
@@ -158,5 +167,5 @@ BACKUP_SPREADSHEET_ID=            # 백업 구글시트 ID
 | AI | OpenAI (gpt-5.1) | Anthropic | 비용 효율(28% 저렴), Tool use 지원 |
 | 차트 | Recharts | Chart.js / Nivo | React·TypeScript 친화적 |
 | 배포 | Vercel | Railway | Next.js 최적화, Cron 내장 |
-| 동기화 | 월말 자동 백업 | 실시간 Google Sheets 동기화 | 단순성·안정성 우선 |
+| 동기화 | 월말 수동 export (홀딩) | 실시간 Google Sheets 동기화 | 단순성 우선, 실사용 후 필요 시 자동화 |
 | 대출 처리 | asset_type='대출', balance 음수 | loan_amount 별도 컬럼 | 테이블 단순화, 일관된 순자산 계산 |

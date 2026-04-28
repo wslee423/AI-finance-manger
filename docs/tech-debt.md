@@ -1,6 +1,6 @@
 # tech-debt.md — 기술 부채 추적
 
-> 발견된 기술 부채를 기록한다. 각 세션 종료 시 /sync-docs가 업데이트.
+> 발견된 기술 부채를 기록한다. 각 세션 종료 시 업데이트.
 
 ---
 
@@ -8,9 +8,9 @@
 
 | ID | 발견일 | 내용 | 우선순위 | 해결 시점 |
 |----|--------|------|---------|---------|
-| TD-001 | 2026-04-26 | assets 테이블에 memo 컬럼 없음 — 마이그레이션 시 기관명(institution) 저장 필요 | 🟡 Medium | Phase 2 스키마 확정 시 |
-| TD-002 | 2026-04-26 | 아파트 contribution_rate 마이그레이션 후 수동 설정 필요 (자동화 어려움) | 🟡 Medium | Phase 2 마이그레이션 후 |
-| TD-003 | 2026-04-26 | dividend 테이블 upsert onConflict 키가 usd_amount null 케이스에서 충돌 가능 | 🟠 High | Phase 2 구현 시 |
+| TD-004 | 2026-04-28 | dashboard API routes의 `select('*')` — 필요한 컬럼만 명시하면 쿼리 성능 개선 가능 | 🟢 Low | 성능 이슈 발생 시 |
+| TD-005 | 2026-04-28 | assets 입력 폼에서 `contribution_rate` 0~1 범위 미검증 — 음수나 1 초과 입력 가능 | 🟡 Medium | Admin UX 개선 시 |
+| TD-006 | 2026-04-28 | 텔레그램 봇 대화 히스토리 미저장 — 세션 간 연속 대화 불가 (OD-004에서 DB 저장 결정했으나 미구현) | 🟡 Medium | AI 튜닝 시 |
 
 ---
 
@@ -18,12 +18,15 @@
 
 | ID | 완료일 | 내용 |
 |----|--------|------|
-| (없음) | | |
+| TD-001 | 2026-04-26 | assets 테이블 memo 컬럼 — institution 컬럼으로 대체 처리 완료 |
+| TD-002 | 2026-04-26 | 아파트 contribution_rate 수동 설정 — 마이그레이션 후 Supabase 대시보드에서 직접 설정 완료 |
+| TD-003 | 2026-04-26 | dividend upsert onConflict 충돌 — insert 방식으로 변경하여 해결 |
+| TD-007 | 2026-04-28 | tools.ts `any` 타입 4개 — eslint-disable 제거, Supabase 타입 추론 + `as unknown as` 명시 |
 
 ---
 
 ## 등록 기준
 
 - 구현 중 발견한 잠재적 버그 또는 개선 필요 사항
-- 일단 넘어가기로 한 임시 구현 (TODO로 마킹된 것)
+- 일단 넘어가기로 한 임시 구현
 - 성능 또는 보안 개선 사항

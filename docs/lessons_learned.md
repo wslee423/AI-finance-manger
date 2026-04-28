@@ -189,3 +189,103 @@ export function formatAuk(value: number): string {
   return String(value)
 }
 ```
+
+---
+
+## Phase 4 — AI 재정 에이전트
+
+### ✅ 잘 된 것
+
+**category enum 강제 적용으로 AI 오분류 방지**
+- 프롬프트로 카테고리 설명 → AI가 `외식비`를 subcategory로 잘못 보내는 오류 발생
+- 해결: Tool definition에 category 값을 `enum`으로 강제
+- 교훈: AI에게 자유 입력을 허용하면 오분류 발생. 고정 도메인 값은 반드시 enum으로 강제할 것
+
+**subcategory 0건 시 keyword 자동 재조회**
+- 사용자: "외식비 보여줘" → AI가 category 대신 subcategory="외식비"로 잘못 전송 → 0건
+- 해결: `runTxQuery()`에서 subcategory 0건이면 keyword로 자동 재조회 (코드 레벨 보장)
+- 교훈: 프롬프트 의존 정확도 개선보다 코드 레벨 fallback이 더 견고함
+
+---
+
+### ⚠️ 트러블슈팅
+
+**SSE 스트리밍 중 Tool use 루프**
+- OpenAI 스트리밍 + Tool use를 동시에 사용하면 청크를 모두 모은 후 tool_calls를 재조립해야 함
+- 교훈: 스트리밍 모드에서 tool_calls는 delta로 분할 전송됨. `toolCallMap`으로 index별 조립 필요
+
+---
+
+## Phase 5 — 텔레그램 봇
+
+### ✅ 잘 된 것
+
+**외부 패키지 없이 Telegram Bot API 직접 사용**
+- `node-telegram-bot-api` 대신 `fetch`로 직접 Webhook 구현
+- 패키지 의존성 최소화, Next.js App Router와 충돌 없음
+- 교훈: 단순 Webhook 처리는 SDK 없이 fetch로도 충분. 패키지 추가 전 직접 구현 검토
+
+**non-streaming 에이전트 분리 (lib/openai/agent.ts)**
+- 웹(SSE 스트리밍)과 텔레그램(단건 응답)의 에이전트 로직을 분리
+- 공통 Tool use 로직(`lib/openai/tools.ts`)은 공유
+- 교훈: 동일 AI 기능을 여러 채널에 제공할 때 스트리밍/비스트리밍 분리가 깔끔
+
+---
+
+### ⚠️ 트러블슈팅
+
+**텔레그램 Webhook에서 Supabase 데이터 조회 0건**
+- 원인: Webhook 요청에 세션 쿠키 없음 → Supabase anon 클라이언트 → RLS 차단
+- 해결: `lib/supabase/service.ts` 생성, Service Role 클라이언트로 RLS 우회
+- 교훈: 외부 Webhook(인증 쿠키 없는 서버-서버 요청)은 Service Role 사용 필수. 단, 외부 인증(chat_id 화이트리스트)을 먼저 검증한 후에만 사용
+
+---
+
+### 재사용 가능한 패턴
+
+**Telegram Webhook 엔드포인트 (Next.js App Router)**
+```typescript
+// 인증: TELEGRAM_ALLOWED_CHAT_IDS 화이트리스트
+// 응답: 항상 200 OK 반환 (Telegram 재시도 방지)
+export async function POST(request: Request) {
+  let chatId: number | undefined
+  try {
+    const body = await request.json()
+    chatId = body.message?.chat?.id
+    if (!chatId || !getAllowedIds().includes(String(chatId))) return Response.json({ ok: true })
+    // 처리 로직
+  } catch (err) {
+    captureError(err, { route: '/api/telegram', feature: 'telegram-bot' })
+    if (chatId) await sendMessage(chatId, '문제가 발생했습니다.').catch(() => {})
+  }
+  return Response.json({ ok: true })
+}
+```
+
+---
+
+## Phase 6 — 안정화
+
+### ✅ 잘 된 것
+
+**Sentry beforeSend로 민감 데이터 자동 필터**
+- `sentry.server.config.ts`에서 `beforeSend` 훅으로 cookies, authorization 헤더, request body 제거
+- 교훈: 금융 서비스에서 에러 모니터링 도입 시 `beforeSend` 필터 필수. 설정 없이 사용하면 민감 데이터가 외부로 전송될 수 있음
+
+**errorId 기반 에러 응답**
+- 사용자에게 스택 트레이스 대신 `문제가 발생했습니다. (ID: A3F9B2C1)` 형태로 노출
+- 동일 errorId로 Sentry에서 원인 추적 가능
+- 교훈: 프로덕션 에러 메시지에는 상세 내용 노출 금지. errorId만 노출하고 내부에서 추적
+
+---
+
+### ⚠️ 트러블슈팅
+
+**@sentry/nextjs v10 `disableSourceMapUpload` 옵션 제거**
+- v10에서 `disableSourceMapUpload` → `sourcemaps: { disable: true }`로 변경됨
+- 교훈: Sentry SDK 메이저 버전 업 시 withSentryConfig 옵션 타입 확인 필수
+
+**Supabase 동적 select 컬럼과 TypeScript 타입 추론**
+- `select(columns)` where `columns`가 런타임 변수이면 Supabase가 타입 추론 불가 → `ParserError` 반환
+- 해결: `as unknown as TargetType[]` 중간 단계 캐스트 (이유 주석 필수)
+- 교훈: Supabase TypeScript 타입은 select 문자열이 컴파일 타임 리터럴일 때만 정확히 추론됨

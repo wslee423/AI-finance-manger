@@ -24,8 +24,9 @@
 | DB / Auth | Supabase (PostgreSQL + Auth + RLS) |
 | AI | OpenAI API (gpt-5.1) |
 | 차트 | Recharts |
-| 배포 | Vercel (Pro 플랜 — Cron Job 필요) |
-| 텔레그램 | node-telegram-bot-api |
+| 배포 | Vercel (Pro 플랜) |
+| 텔레그램 | Telegram Bot API (Webhook, 외부 패키지 없음) |
+| 에러 모니터링 | Sentry (@sentry/nextjs) |
 
 ---
 
@@ -57,7 +58,7 @@ npm run test
 - transactions / assets / dividend hard delete
 - 허용 이메일 외 사용자 접근 허용
 - AI 에이전트 역할 임의 변경
-- `as SomeType[]` 강제 캐스팅 — Supabase 자동생성 타입 사용
+- `as SomeType[]` 강제 캐스팅 — Supabase 자동생성 타입 사용 (불가피한 경우 `as unknown as Type[]` 허용, 주석 필수)
 
 **핵심 파일 (테스트 없이 수정 금지)**
 ```
@@ -136,10 +137,13 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=          # 서버 전용
 OPENAI_API_KEY=                     # 서버 전용
+NEXT_PUBLIC_SENTRY_DSN=             # Sentry 에러 모니터링
 TELEGRAM_BOT_TOKEN=                 # 서버 전용
 TELEGRAM_ALLOWED_CHAT_IDS=          # 허용 chat_id (콤마 구분)
-CRON_SECRET=                        # Vercel Cron 인증용
-GOOGLE_SERVICE_ACCOUNT_JSON=        # 구글 서비스 계정 JSON
-BACKUP_SPREADSHEET_ID=              # 백업 구글시트 ID
-EXCHANGE_RATE_API_KEY=              # 환율 API (OD-002)
+TELEGRAM_OPS_CHAT_ID=               # 운영 에러 알림 수신 chat_id
+EXCHANGE_RATE_API_KEY=              # 환율 API
+# 아래는 월말 자동 백업 구현 시 필요 (현재 홀딩)
+# CRON_SECRET=
+# GOOGLE_SERVICE_ACCOUNT_JSON=
+# BACKUP_SPREADSHEET_ID=
 ```

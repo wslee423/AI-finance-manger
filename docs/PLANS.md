@@ -19,7 +19,7 @@
 | Phase 3 | 재정 대시보드 | 3주 | ✅ |
 | Phase 4 | AI 재정 에이전트 | 3주 | ✅ |
 | Phase 5 | 텔레그램 봇 | 2주 | ✅ |
-| Phase 6 | 안정화 | 상시 | 🔲 |
+| Phase 6 | 안정화 | 상시 | 🔄 |
 
 상태: 🔲 미시작 / 🔄 진행 중 / ✅ 완료
 
@@ -131,10 +131,13 @@
 ## Phase 6 — 안정화
 
 **작업 목록**
-- [ ] 에러 모니터링 설정 (Sentry 또는 Vercel Log Drains)
+- [x] Sentry 에러 모니터링 설정 (@sentry/nextjs + DSN 연동)
+- [x] 에러 처리 정책 구현 (captureError, notifyTelegramOps, beforeSend 필터)
+- [x] 코드 품질 개선 (any 제거, JSON.parse 안전 처리, auth 에러 핸들링)
 - [ ] Supabase 자동 백업 주기 확인 (프로젝트 설정)
 - [ ] AI 에이전트 프롬프트 품질 개선 (실사용 후 튜닝)
 - [ ] 연간 재정 리포트 자동 생성 검토
+- ⏸️ 월말 자동 백업 (Supabase → 구글시트) — 홀딩 결정 (2026-04-28)
 
 ---
 
