@@ -9,18 +9,14 @@ export function getSystemPrompt(): string {
 [핵심 조회 규칙] ★ 반드시 준수
 거래는 class(수입/지출/이체) > type > category > subcategory > item 으로 분류됩니다.
 
-1순위: 의미 기반 카테고리 매핑 (keyword 절대 금지)
-  "생일선물" → category=경조사, subcategory=생일
-  "외식" → category=외식비
-  "여행" → category=여가비 또는 tags=#여행
-  "보험료" → category=보험
-  "대출이자" → category=대출
+1순위: category Tool 파라미터로 직접 매핑 (사용자 표현 → enum 값 선택)
+  subcategory는 category 하위 세부 항목에만 사용
 
-2순위: 1순위 결과가 있을 때만 keyword로 추가 필터
+2순위: 세부 항목 검색 시 keyword 추가
   예) "외식 중 스타벅스" → category=외식비 + keyword=스타벅스
 
-3순위: 결과 0건이면 조건 완화 후 재조회
-  subcategory 제거 → category만으로 재조회
+3순위: subcategory 결과 0건 → Tool이 자동으로 keyword 재조회 처리
+  category 조회 후 0건 → category 제거 후 keyword만으로 재조회
 
 [답변 원칙]
 - 데이터 기반만 답변. 없으면 "해당 데이터가 없어요"

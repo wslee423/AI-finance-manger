@@ -15,8 +15,12 @@ export const TOOLS: ChatCompletionTool[] = [
           from: { type: 'string', description: '시작 날짜 (YYYY-MM 또는 YYYY-MM-DD)' },
           to: { type: 'string', description: '종료 날짜 (YYYY-MM 또는 YYYY-MM-DD). 미지정 시 오늘까지' },
           class_type: { type: 'string', enum: ['수입', '지출', '이체'], description: '거래 유형 (이체=저축/투자)' },
-          category: { type: 'string', description: '카테고리 (고정지출, 변동지출, 기타지출, 주수입, 기타수입 등)' },
-          subcategory: { type: 'string', description: '서브카테고리 (외식비, 보험, 경조사 등)' },
+          category: {
+            type: 'string',
+            enum: ['보험', '용돈', '관리비', '통신비', '구독/멤버십', '마트/편의점', '외식비', '의류/미용', '여가비', '병원비', '경조사', '기타'],
+            description: '지출 카테고리. 특정 카테고리 검색 시만 사용. 전체 지출 조회 시 생략.',
+          },
+          subcategory: { type: 'string', description: 'category 하위 세부 항목 (자유 입력). category 고정값과 중복 사용 금지.' },
           user_name: { type: 'string', enum: ['운섭', '아름', '희온', '공동'], description: '가족 구성원' },
           tags: { type: 'string', description: '태그 키워드 검색 (예: #육아, #부동산). 쉼표 구분 문자열' },
           keyword: { type: 'string', description: '메모/항목명 키워드 검색' },
@@ -41,7 +45,7 @@ export const TOOLS: ChatCompletionTool[] = [
         properties: {
           snapshot_date: { type: 'string', description: '조회할 월 (YYYY-MM). 미지정 시 최신 스냅샷' },
           owner: { type: 'string', enum: ['운섭', '아름', '공동', 'all'], description: '소유자 필터. 기본: all' },
-          asset_type: { type: 'string', description: '자산 유형 필터 (부동산, 통장, 연금, 예적금, 기타, 대출)' },
+          asset_type: { type: 'string', enum: ['부동산', '통장', '연금', '예적금', '기타', '대출'], description: '자산 유형 필터' },
           history: { type: 'boolean', description: 'true면 전체 추이 반환' },
         },
       },
@@ -129,10 +133,8 @@ type TxArgs = {
   keyword?: string; aggregate?: string; limit?: number
 }
 
-async function queryTransactions(args: Record<string, unknown>) {
-  const supabase = await createClient()
-  const { from, to, class_type, category, subcategory, user_name, tags, keyword, aggregate = 'sum', limit = 10 } = args as TxArgs
-  const { fromDate, toDate } = toDateRange(from, to)
+async function runTxQuery(supabase: Awaited<ReturnType<typeof createClient>>, params: TxArgs & { fromDate: string; toDate: string }) {
+  const { fromDate, toDate, class_type, category, subcategory, user_name, tags, keyword, aggregate = 'sum', limit = 10 } = params
   const safeLimit = Math.min(Number(limit), 10)
 
   const columns = aggregate === 'list'
@@ -161,7 +163,23 @@ async function queryTransactions(args: Record<string, unknown>) {
 
   const { data, error } = await q
   if (error) throw new Error(error.message)
-  const rows = (data ?? []) as { amount: number; class: string }[]
+  return (data ?? []) as { amount: number; class: string }[]
+}
+
+async function queryTransactions(args: Record<string, unknown>) {
+  const supabase = await createClient()
+  const parsed = args as TxArgs
+  const { from, to, aggregate = 'sum' } = parsed
+  const { fromDate, toDate } = toDateRange(from, to)
+  const base = { ...parsed, fromDate, toDate }
+
+  let rows = await runTxQuery(supabase, base)
+
+  // subcategory 0건이면 keyword로 자동 재조회 (subcategory는 자유입력이라 저장 방식이 다를 수 있음)
+  if (rows.length === 0 && parsed.subcategory && !parsed.keyword) {
+    console.log(`[Auto-retry] subcategory="${parsed.subcategory}" 0건 → keyword로 재조회`)
+    rows = await runTxQuery(supabase, { ...base, subcategory: undefined, keyword: parsed.subcategory })
+  }
 
   if (aggregate === 'list') return { period: `${fromDate}~${toDate}`, count: rows.length, items: rows }
 

@@ -88,7 +88,14 @@ export async function POST(request: Request) {
               let result: unknown
               try {
                 const args = JSON.parse(tc.function.arguments) as Record<string, unknown>
+                if (process.env.NODE_ENV === 'development') {
+                  console.log(`\n[Tool Call] ${tc.function.name}`)
+                  console.log(`[Args]`, JSON.stringify(args, null, 2))
+                }
                 result = await executeToolCall(tc.function.name, args)
+                if (process.env.NODE_ENV === 'development') {
+                  console.log(`[Result]`, JSON.stringify(result, null, 2))
+                }
               } catch (err) {
                 console.error(`[tool] ${tc.function.name} 실패:`, err)
                 result = { error: '데이터 조회에 실패했어요. 다시 시도해주세요.' }
