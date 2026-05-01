@@ -4,7 +4,7 @@ import { formatCurrency } from '@/lib/utils'
 
 interface RecentAssetsData {
   dates: string[]
-  assets: { institution: string; asset_type: string; balances: number[] }[]
+  assets: { assettype: string; asset_type: string; balances: number[] }[]
   totals: number[]
 }
 
@@ -36,9 +36,9 @@ export default function RecentAssets({ data }: { data: RecentAssetsData }) {
         </thead>
         <tbody className="divide-y divide-gray-100">
           {assets.map(a => (
-            <tr key={a.institution} className="hover:bg-gray-50">
+            <tr key={a.assettype} className="hover:bg-gray-50">
               <td className="px-4 py-2.5">
-                <span className="text-gray-800 font-medium text-xs">{a.institution}</span>
+                <span className="text-gray-800 font-medium text-xs">{a.assettype}</span>
                 <span className="text-gray-400 text-xs ml-1.5">({a.asset_type})</span>
               </td>
               {a.balances.map((b, i) => (
