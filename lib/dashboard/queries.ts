@@ -286,8 +286,10 @@ export async function getTagBreakdown(from?: string, to?: string) {
   const tagMap = new Map<string, number>()
   for (const t of data) {
     if (!t.tags) continue
-    t.tags.split(',').map(tag => tag.trim()).filter(Boolean).forEach(tag => {
-      tagMap.set(tag, (tagMap.get(tag) ?? 0) + t.amount)
+    const tags = Array.isArray(t.tags) ? t.tags : t.tags.split(',').map(tag => tag.trim())
+    tags.filter(Boolean).forEach(tag => {
+      const trimmed = typeof tag === 'string' ? tag.trim() : String(tag).trim()
+      if (trimmed) tagMap.set(trimmed, (tagMap.get(trimmed) ?? 0) + t.amount)
     })
   }
   return Array.from(tagMap.entries())
