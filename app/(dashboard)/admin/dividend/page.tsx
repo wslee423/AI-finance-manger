@@ -148,11 +148,11 @@ export default function DividendPage() {
         <form onSubmit={handleSubmit} className="bg-white border border-gray-200 rounded-xl p-5 mb-4 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">날짜</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">날짜 <span className="text-red-500">*</span></label>
               <input type="date" value={form.date} onChange={e => setForm(f=>({...f, date: e.target.value}))} required className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">종목명</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">종목명 <span className="text-red-500">*</span></label>
               <input type="text" value={form.ticker_name} onChange={e => setForm(f=>({...f, ticker_name: e.target.value}))} required placeholder="SCHD, TLT, O..." className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" />
             </div>
           </div>

@@ -200,8 +200,8 @@ export default function TransactionsPage() {
           </div>
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">카테고리</label>
-              <select value={form.category} onChange={e => setForm(f=>({...f, category: e.target.value, subcategory: ''}))} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg">
+              <label className="block text-xs font-medium text-gray-600 mb-1">카테고리 <span className="text-red-500">*</span></label>
+              <select value={form.category} onChange={e => setForm(f=>({...f, category: e.target.value, subcategory: ''}))} required className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg">
                 {(CATEGORIES[form.class as '수입' | '지출'] ?? []).map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>

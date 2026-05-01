@@ -104,7 +104,8 @@ export default function AssetsPage() {
         }))
 
       if (items.length === 0) {
-        setToast({ message: '저장할 항목이 없습니다 (기관명을 입력해주세요)', type: 'error' })
+        const emptyRows = rows.map((r, i) => !r.institution?.trim() ? i + 1 : null).filter(Boolean).join(', ')
+        setToast({ message: `⚠️ 기관명이 비어있는 행: ${emptyRows}번째 (기관명은 필수입니다)`, type: 'error' })
         return
       }
 
@@ -186,7 +187,7 @@ export default function AssetsPage() {
                   </td>
                   <td className="px-3 py-2">
                     <input value={row.institution} onChange={e => setRows(r => r.map((x,j)=>j===i?{...x,institution:e.target.value}:x))}
-                      placeholder="기관명" className="w-full px-2 py-1 text-sm border border-gray-300 rounded" />
+                      placeholder="기관명 (필수)" required className={`w-full px-2 py-1 text-sm border rounded ${!row.institution?.trim() ? 'border-red-300 bg-red-50' : 'border-gray-300'}`} />
                   </td>
                   <td className="px-3 py-2">
                     <select value={row.owner} onChange={e => setRows(r => r.map((x,j)=>j===i?{...x,owner:e.target.value as AssetOwner}:x))}
