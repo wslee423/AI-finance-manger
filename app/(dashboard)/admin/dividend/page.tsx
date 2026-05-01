@@ -205,7 +205,7 @@ export default function DividendPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                {['날짜','종목','티커','USD','환율','원화금액',''].map(h => (
+                {['날짜','종목','계좌','USD','환율','원화금액',''].map(h => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500">{h}</th>
                 ))}
               </tr>
@@ -215,7 +215,7 @@ export default function DividendPage() {
                 <tr key={d.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 text-gray-600">{formatDate(d.date)}</td>
                   <td className="px-4 py-3 text-gray-800 font-medium">{d.ticker_name}</td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">{d.ticker_symbol ?? '-'}</td>
+                  <td className="px-4 py-3 text-gray-500 text-xs">{d.account ?? '-'}</td>
                   <td className="px-4 py-3 text-gray-600">{d.usd_amount != null ? `$${d.usd_amount}` : '-'}</td>
                   <td className="px-4 py-3 text-gray-600">{d.exchange_rate != null ? d.exchange_rate.toLocaleString() : '-'}</td>
                   <td className="px-4 py-3 text-green-700 font-medium">{formatCurrency(d.krw_amount)}</td>
