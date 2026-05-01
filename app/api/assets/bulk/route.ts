@@ -13,7 +13,7 @@ export async function POST(request: Request) {
 
   const { data, error } = await supabase
     .from('assets')
-    .upsert(items, { onConflict: 'snapshot_date,asset_type,institution,owner' })
+    .upsert(items, { onConflict: 'snapshot_date,asset_type,assettype,institution,owner' })
     .select()
 
   if (error) return serverError(error.message)
