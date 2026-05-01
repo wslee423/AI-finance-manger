@@ -32,6 +32,10 @@ async function handleCommand(command: string): Promise<string> {
 }
 
 export async function POST(request: Request) {
+  if (process.env.ENABLE_TELEGRAM_ALERTS === 'false') {
+    return Response.json({ ok: true })
+  }
+
   let chatId: number | undefined
 
   try {
