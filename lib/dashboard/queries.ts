@@ -222,21 +222,22 @@ export async function getRecentAssets(months = 5) {
   const uniqueDates = [...new Set(allDates.map(d => d.snapshot_date))].slice(0, months).reverse()
   if (uniqueDates.length === 0) return { dates: [], assets: [], totals: [] }
 
-  const data = await fetchAll<{ snapshot_date: string; asset_type: string; assettype: string | null; balance: number }>(
-    supabase, 'assets', 'snapshot_date, asset_type, assettype, balance',
+  const data = await fetchAll<{ snapshot_date: string; asset_type: string; assettype: string | null; owner: string; balance: number }>(
+    supabase, 'assets', 'snapshot_date, asset_type, assettype, owner, balance',
     q => q.in('snapshot_date', uniqueDates).order('assettype', { ascending: true })
   )
 
-  const assettypeMap = new Map<string | null, { asset_type: string; balances: Map<string, number> }>()
+  const OWNER_NAMES: Record<string, string> = { '운섭': '운섭', '아름': '아름', '공동': '공동소유' }
+  const assettypeMap = new Map<string, { asset_type: string; owner: string; balances: Map<string, number> }>()
   for (const a of data) {
-    const key = a.assettype ?? '기타'
-    const cur = assettypeMap.get(key) ?? { asset_type: a.asset_type, balances: new Map() }
+    const key = `${a.assettype ?? '기타'}|${a.owner}`
+    const cur = assettypeMap.get(key) ?? { asset_type: a.asset_type, owner: a.owner, balances: new Map() }
     cur.balances.set(a.snapshot_date, (cur.balances.get(a.snapshot_date) ?? 0) + a.balance)
     assettypeMap.set(key, cur)
   }
 
-  const assets = Array.from(assettypeMap.entries()).map(([assettype, { asset_type, balances }]) => ({
-    assettype: assettype || '기타', asset_type, balances: uniqueDates.map(d => balances.get(d) ?? 0),
+  const assets = Array.from(assettypeMap.entries()).map(([_, { asset_type, owner, balances }]) => ({
+    assettype: _.split('|')[0], owner: OWNER_NAMES[owner] || owner, asset_type, balances: uniqueDates.map(d => balances.get(d) ?? 0),
   }))
   const totals = uniqueDates.map((_, i) => assets.reduce((s, a) => s + a.balances[i], 0))
   return { dates: uniqueDates, assets, totals }
