@@ -276,7 +276,7 @@ export async function getTagBreakdown(from?: string, to?: string) {
   const supabase = await createClient()
   const data = await fetchAll<{ tags: string | null; amount: number }>(
     supabase, 'transactions', 'tags, amount', q => {
-      let r = q.is('deleted_at', null).eq('class', '지출').not('tags', 'is', null).neq('tags', '')
+      let r = q.is('deleted_at', null).eq('class', '지출').not('tags', 'is', null)
       if (from) r = r.gte('date', `${from}-01`)
       if (to) { const [y, m] = to.split('-').map(Number); r = r.lte('date', `${to}-${new Date(y, m, 0).getDate()}`) }
       return r
