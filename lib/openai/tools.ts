@@ -146,8 +146,8 @@ async function runTxQuery(supabase: AnySupabaseClient, params: TxArgs & { fromDa
   const safeLimit = Math.min(Number(limit), 10)
 
   const columns = aggregate === 'list'
-    ? 'date, class, type, category, subcategory, item, user_name, amount, memo'
-    : 'amount, class'
+    ? 'date, class, type, category, subcategory, item, user_name, amount, memo, tags'
+    : 'amount, class, tags'
 
   let q = supabase.from('transactions')
     .select(columns)
@@ -159,19 +159,35 @@ async function runTxQuery(supabase: AnySupabaseClient, params: TxArgs & { fromDa
   if (category) q = q.eq('category', category)
   if (subcategory) q = q.ilike('subcategory', `%${subcategory}%`)
   if (user_name) q = q.eq('user_name', user_name)
-  if (tags) q = q.ilike('tags', `%${tags}%`)
+  // tags는 배열(demo)/문자열(prod) 혼재이므로 클라이언트 필터링
   if (keyword) q = q.or(`memo.ilike.%${keyword}%,item.ilike.%${keyword}%`)
 
   if (aggregate === 'list') {
-    q = q.order('date', { ascending: false }).limit(safeLimit)
+    q = q.order('date', { ascending: false }).limit(safeLimit * 2) // tags 필터링 후 안전 여유
   } else {
     q = q.order('date')
   }
 
-  const { data, error } = await q
+  const { data: rawData, error } = await q
   if (error) throw new Error(error.message)
+
   // columns이 런타임 변수라 Supabase 타입 추론 불가 — unknown 경유 캐스트
-  return (data ?? []) as unknown as { amount: number; class: string }[]
+  let data = (rawData ?? []) as unknown as Array<Record<string, unknown>>
+
+  // tags 필터링 (배열/문자열 모두 처리)
+  if (tags) {
+    const tagLower = tags.toLowerCase()
+    data = data.filter(row => {
+      const rowTags = row.tags
+      if (!rowTags) return false
+      const tagsStr = Array.isArray(rowTags)
+        ? rowTags.join(',').toLowerCase()
+        : String(rowTags).toLowerCase()
+      return tagsStr.includes(tagLower)
+    })
+  }
+
+  return data.slice(0, safeLimit) as unknown as { amount: number; class: string }[]
 }
 
 async function queryTransactions(args: Record<string, unknown>, serviceRole = false) {
