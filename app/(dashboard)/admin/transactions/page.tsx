@@ -103,6 +103,7 @@ export default function TransactionsPage() {
   }
 
   function handleEdit(t: Transaction) {
+    const tagsStr = Array.isArray(t.tags) ? t.tags.join(', ') : (t.tags ?? '')
     setForm({
       date: t.date,
       class: t.class,
@@ -112,7 +113,7 @@ export default function TransactionsPage() {
       user_name: t.user_name,
       amount: String(t.amount),
       memo: t.memo ?? '',
-      tags: t.tags ?? '',
+      tags: tagsStr,
     })
     setEditId(t.id)
     setShowForm(true)
@@ -338,11 +339,12 @@ export default function TransactionsPage() {
                       )}
                     </td>
                     <td className="px-3 py-2.5 max-w-40">
-                      {t.tags ? (
+                      {t.tags && (Array.isArray(t.tags) ? t.tags : t.tags.split(',')).length > 0 ? (
                         <div className="flex flex-wrap gap-0.5">
-                          {t.tags.split(',').map(tag => tag.trim()).filter(Boolean).map(tag => (
-                            <span key={tag} className="px-1.5 py-0.5 bg-blue-50 text-blue-600 text-xs rounded-full whitespace-nowrap">{tag}</span>
-                          ))}
+                          {(Array.isArray(t.tags) ? t.tags : t.tags.split(',')).map(tag => {
+                            const trimmed = typeof tag === 'string' ? tag.trim() : String(tag).trim()
+                            return trimmed ? <span key={trimmed} className="px-1.5 py-0.5 bg-blue-50 text-blue-600 text-xs rounded-full whitespace-nowrap">{trimmed}</span> : null
+                          })}
                         </div>
                       ) : <span className="text-gray-300 text-xs">-</span>}
                     </td>
