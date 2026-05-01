@@ -1,5 +1,3 @@
-'use client'
-
 export default function DemoBanner() {
   if (process.env.NEXT_PUBLIC_APP_MODE !== 'demo') return null
 

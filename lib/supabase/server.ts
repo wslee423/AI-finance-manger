@@ -4,7 +4,11 @@ import { cookies } from 'next/headers'
 export async function createClient() {
   const cookieStore = await cookies()
 
-  const schema = process.env.APP_MODE === 'demo' ? 'demo' : 'public'
+  const isDemo = process.env.APP_MODE === 'demo'
+  if (isDemo && process.env.NEXT_PUBLIC_APP_MODE !== 'demo') {
+    throw new Error('[DEMO GUARD] APP_MODE=demo이지만 NEXT_PUBLIC_APP_MODE가 demo가 아닙니다')
+  }
+  const schema = isDemo ? 'demo' : 'public'
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

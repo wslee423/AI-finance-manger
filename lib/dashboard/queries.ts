@@ -1,6 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
+function normalizeTags(tags: string[] | string | null | undefined): string[] {
+  if (!tags) return []
+  if (Array.isArray(tags)) return tags.map(t => String(t).trim()).filter(Boolean)
+  return tags.split(',').map(t => t.trim()).filter(Boolean)
+}
+
 // Supabase max-rows 프로젝트 설정(기본 1000)을 우회하는 페이지네이션 전체 조회
 async function fetchAll<T>(
   supabase: SupabaseClient,
@@ -274,7 +280,7 @@ export async function getPersonalNetworth() {
 // ─── 태그별 지출 합계 Top 10 ──────────────────────────────────────────────────
 export async function getTagBreakdown(from?: string, to?: string) {
   const supabase = await createClient()
-  const data = await fetchAll<{ tags: string | null; amount: number }>(
+  const data = await fetchAll<{ tags: string[] | string | null; amount: number }>(
     supabase, 'transactions', 'tags, amount', q => {
       let r = q.is('deleted_at', null).eq('class', '지출').not('tags', 'is', null)
       if (from) r = r.gte('date', `${from}-01`)
@@ -286,10 +292,9 @@ export async function getTagBreakdown(from?: string, to?: string) {
   const tagMap = new Map<string, number>()
   for (const t of data) {
     if (!t.tags) continue
-    const tags = Array.isArray(t.tags) ? t.tags : t.tags.split(',').map(tag => tag.trim())
-    tags.filter(Boolean).forEach(tag => {
-      const trimmed = typeof tag === 'string' ? tag.trim() : String(tag).trim()
-      if (trimmed) tagMap.set(trimmed, (tagMap.get(trimmed) ?? 0) + t.amount)
+    const tags = normalizeTags(t.tags)
+    tags.forEach(tag => {
+      tagMap.set(tag, (tagMap.get(tag) ?? 0) + t.amount)
     })
   }
   return Array.from(tagMap.entries())

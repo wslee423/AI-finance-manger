@@ -163,7 +163,9 @@ async function runTxQuery(supabase: AnySupabaseClient, params: TxArgs & { fromDa
   if (keyword) q = q.or(`memo.ilike.%${keyword}%,item.ilike.%${keyword}%`)
 
   if (aggregate === 'list') {
-    q = q.order('date', { ascending: false }).limit(safeLimit * 2) // tags 필터링 후 안전 여유
+    // tags 클라이언트 필터링을 위해 충분한 데이터 확보
+    const fetchLimit = tags ? 500 : safeLimit
+    q = q.order('date', { ascending: false }).limit(fetchLimit)
   } else {
     q = q.order('date')
   }

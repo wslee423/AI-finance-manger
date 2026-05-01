@@ -9,6 +9,12 @@ import PresetModal from '@/components/admin/PresetModal'
 import ImportModal from '@/components/admin/ImportModal'
 import TagInput from '@/components/admin/TagInput'
 
+function normalizeTags(tags: string | string[] | undefined | null): string[] {
+  if (!tags) return []
+  if (Array.isArray(tags)) return tags.map(t => String(t).trim()).filter(Boolean)
+  return tags.split(',').map(t => t.trim()).filter(Boolean)
+}
+
 const makeEmptyForm = () => ({
   date: getTodayStr(),
   class: '지출' as ClassType,
@@ -103,7 +109,7 @@ export default function TransactionsPage() {
   }
 
   function handleEdit(t: Transaction) {
-    const tagsStr = Array.isArray(t.tags) ? t.tags.join(', ') : (t.tags ?? '')
+    const tagsStr = normalizeTags(t.tags).join(', ')
     setForm({
       date: t.date,
       class: t.class,
@@ -339,12 +345,11 @@ export default function TransactionsPage() {
                       )}
                     </td>
                     <td className="px-3 py-2.5 max-w-40">
-                      {t.tags && (Array.isArray(t.tags) ? t.tags : t.tags.split(',')).length > 0 ? (
+                      {normalizeTags(t.tags).length > 0 ? (
                         <div className="flex flex-wrap gap-0.5">
-                          {(Array.isArray(t.tags) ? t.tags : t.tags.split(',')).map(tag => {
-                            const trimmed = typeof tag === 'string' ? tag.trim() : String(tag).trim()
-                            return trimmed ? <span key={trimmed} className="px-1.5 py-0.5 bg-blue-50 text-blue-600 text-xs rounded-full whitespace-nowrap">{trimmed}</span> : null
-                          })}
+                          {normalizeTags(t.tags).map(tag => (
+                            <span key={tag} className="px-1.5 py-0.5 bg-blue-50 text-blue-600 text-xs rounded-full whitespace-nowrap">{tag}</span>
+                          ))}
                         </div>
                       ) : <span className="text-gray-300 text-xs">-</span>}
                     </td>
