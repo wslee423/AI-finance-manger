@@ -72,11 +72,15 @@ export default function ImportModal({ onClose, onSuccess }: ImportModalProps) {
       fd.append('mode', 'confirm')
       fd.append('rows', JSON.stringify(valid))
       const res = await fetch('/api/transactions/import', { method: 'POST', body: fd })
-      if (!res.ok) throw new Error()
-      const { saved } = await res.json()
-      onSuccess(saved)
-    } catch {
-      setErrorMsg('저장에 실패했습니다')
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error((errorData as { error?: string }).error ?? `저장 실패 (${res.status})`)
+      }
+      const data = await res.json()
+      if (!data || typeof data.saved !== 'number') throw new Error('응답 형식이 올바르지 않습니다')
+      onSuccess(data.saved)
+    } catch (e) {
+      setErrorMsg(e instanceof Error ? e.message : '저장에 실패했습니다')
     } finally {
       setSaving(false)
     }
