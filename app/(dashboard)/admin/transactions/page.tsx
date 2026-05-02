@@ -60,6 +60,7 @@ export default function TransactionsPage() {
 
   // 필터 상태
   const [filterClass, setFilterClass] = useState('전체')
+  const [filterType, setFilterType] = useState('전체')
   const [filterCategory, setFilterCategory] = useState('전체')
   const [filterUser, setFilterUser] = useState('전체')
   const [filterKeyword, setFilterKeyword] = useState('')
@@ -79,20 +80,33 @@ export default function TransactionsPage() {
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  // 필터 변경 시 카테고리 리셋
-  useEffect(() => { setFilterCategory('전체') }, [filterClass])
+  // 분류 변경 시 유형, 카테고리 리셋
+  useEffect(() => { setFilterType('전체'); setFilterCategory('전체') }, [filterClass])
+
+  // 유형 변경 시 카테고리 리셋
+  useEffect(() => { setFilterCategory('전체') }, [filterType])
+
+  // 현재 데이터에서 유형 목록 동적 추출
+  const typeOptions = useMemo(() => {
+    const base = transactions
+      .filter(t => filterClass === '전체' || t.class === filterClass)
+      .map(t => t.type)
+    return ['전체', ...Array.from(new Set(base)).filter(Boolean)]
+  }, [transactions, filterClass])
 
   // 현재 데이터에서 카테고리 목록 동적 추출
   const categoryOptions = useMemo(() => {
     const base = transactions
       .filter(t => filterClass === '전체' || t.class === filterClass)
+      .filter(t => filterType === '전체' || t.type === filterType)
       .map(t => t.category)
-    return ['전체', ...Array.from(new Set(base))]
-  }, [transactions, filterClass])
+    return ['전체', ...Array.from(new Set(base)).filter(Boolean)]
+  }, [transactions, filterClass, filterType])
 
   // 클라이언트 필터링
   const filtered = useMemo(() => transactions.filter(t => {
     if (filterClass !== '전체' && t.class !== filterClass) return false
+    if (filterType !== '전체' && t.type !== filterType) return false
     if (filterCategory !== '전체' && t.category !== filterCategory) return false
     if (filterUser !== '전체' && t.user_name !== filterUser) return false
     if (filterKeyword) {
@@ -101,7 +115,7 @@ export default function TransactionsPage() {
       if (!hit) return false
     }
     return true
-  }), [transactions, filterClass, filterCategory, filterUser, filterKeyword])
+  }), [transactions, filterClass, filterType, filterCategory, filterUser, filterKeyword])
 
   function handleClassChange(classType: '수입' | '지출') {
     const defaultCat = CATEGORIES[classType][0]
@@ -277,6 +291,9 @@ export default function TransactionsPage() {
         <select value={filterClass} onChange={e => setFilterClass(e.target.value)} className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-white">
           {['전체','수입','지출','이체'].map(v => <option key={v} value={v}>{v === '전체' ? '분류 전체' : v}</option>)}
         </select>
+        <select value={filterType} onChange={e => setFilterType(e.target.value)} className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-white">
+          {typeOptions.map(v => <option key={v} value={v}>{v === '전체' ? '유형 전체' : v}</option>)}
+        </select>
         <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-white">
           {categoryOptions.map(v => <option key={v} value={v}>{v === '전체' ? '카테고리 전체' : v}</option>)}
         </select>
@@ -288,8 +305,8 @@ export default function TransactionsPage() {
           placeholder="항목명/세부/메모 검색..."
           className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-white flex-1 min-w-40"
         />
-        {(filterClass !== '전체' || filterCategory !== '전체' || filterUser !== '전체' || filterKeyword) && (
-          <button onClick={() => { setFilterClass('전체'); setFilterCategory('전체'); setFilterUser('전체'); setFilterKeyword('') }}
+        {(filterClass !== '전체' || filterType !== '전체' || filterCategory !== '전체' || filterUser !== '전체' || filterKeyword) && (
+          <button onClick={() => { setFilterClass('전체'); setFilterType('전체'); setFilterCategory('전체'); setFilterUser('전체'); setFilterKeyword('') }}
             className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700">
             필터 초기화
           </button>
@@ -310,7 +327,7 @@ export default function TransactionsPage() {
             <table className="w-full text-sm whitespace-nowrap">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  {['날짜','분류','카테고리','세부카테고리','항목명','사용자','금액','메모','태그',''].map(h => (
+                  {['날짜','분류','유형','카테고리','세부카테고리','항목명','사용자','금액','메모','태그',''].map(h => (
                     <th key={h} className="px-3 py-3 text-left text-xs font-medium text-gray-500">{h}</th>
                   ))}
                 </tr>
@@ -324,6 +341,7 @@ export default function TransactionsPage() {
                         {t.class}
                       </span>
                     </td>
+                    <td className="px-3 py-2.5 text-gray-600 text-xs">{t.type || '-'}</td>
                     <td className="px-3 py-2.5 text-gray-700 text-xs">{t.category || '-'}</td>
                     <td className="px-3 py-2.5 text-gray-600 text-xs">{t.subcategory || '-'}</td>
                     <td className="px-3 py-2.5 text-gray-600 text-xs">{t.item || '-'}</td>
