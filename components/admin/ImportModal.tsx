@@ -10,7 +10,7 @@ interface ImportRow {
   category: string
   subcategory: string | null
   item: string | null
-  user_name: string
+  user_name: string | null
   amount: number
   memo: string | null
   error?: string
@@ -187,7 +187,7 @@ export default function ImportModal({ onClose, onSuccess }: ImportModalProps) {
                         </td>
                         <td className="px-3 py-2 text-gray-700">{r.category}</td>
                         <td className="px-3 py-2 text-gray-500">{r.subcategory ?? '-'}</td>
-                        <td className="px-3 py-2 text-gray-500">{r.user_name}</td>
+                        <td className="px-3 py-2 text-gray-500">{r.user_name ?? '-'}</td>
                         <td className="px-3 py-2 text-right font-medium text-gray-800">{r.amount > 0 ? formatCurrency(r.amount) : '-'}</td>
                         <td className="px-3 py-2 text-gray-400 max-w-24 truncate">{r.memo ?? '-'}</td>
                       </tr>

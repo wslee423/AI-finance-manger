@@ -9,7 +9,7 @@ type ImportRow = {
   category: string
   subcategory: string | null
   item: string | null
-  user_name: string
+  user_name: string | null
   amount: number
   memo: string | null
   error?: string
@@ -34,9 +34,9 @@ function normalizeCategory(type: unknown): string {
   return t
 }
 
-function normalizeUser(user: unknown): string {
+function normalizeUser(user: unknown): string | null {
   const u = String(user ?? '').trim()
-  return VALID_USERS.includes(u) ? u : '공동'
+  return VALID_USERS.includes(u) ? u : null
 }
 
 // 지원 컬럼명 (기존 구글시트 형식 + 간편 형식 모두)
