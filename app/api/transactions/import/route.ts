@@ -76,9 +76,9 @@ export async function POST(request: Request) {
       valid.map(r => ({
         date: r.date,
         class: r.class,
-        category: r.category,
-        subcategory: r.subcategory,
-        item: r.item,
+        type: r.category,
+        category: r.subcategory,
+        subcategory: r.item,
         user_name: r.user_name,
         amount: r.amount,
         memo: r.memo,
